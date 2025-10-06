@@ -1,0 +1,52 @@
+{
+  "R001": {
+    "name": "Spice Garden",
+    "city": "Mumbai",
+    "cuisine": "Indian",
+    "rating": 4.5,
+    "price_range": "$$",
+    "seating_capacity": 80,
+    "established_year": 2015,
+    "category": "Fine Dining"
+  },
+  "R002": {
+    "name": "The Pasta House",
+    "city": "Bangalore",
+    "cuisine": "Italian",
+    "rating": 4.2,
+    "price_range": "$$$",
+    "seating_capacity": 50,
+    "established_year": 2018,
+    "category": "Casual Dining"
+  },
+  "R003": {
+    "name": "Dragon Wok",
+    "city": "Delhi",
+    "cuisine": "Chinese",
+    "rating": 4.7,
+    "price_range": "$$",
+    "seating_capacity": 120,
+    "established_year": 2010,
+    "category": "Fine Dining"
+  },
+  "R004": {
+    "name": "Burger Junction",
+    "city": "Pune",
+    "cuisine": "American",
+    "rating": 3.9,
+    "price_range": "$",
+    "seating_capacity": 40,
+    "established_year": 2020,
+    "category": "Fast Food"
+  },
+  "R005": {
+    "name": "Sushi Station",
+    "city": "Hyderabad",
+    "cuisine": "Japanese",
+    "rating": 4.8,
+    "price_range": "$$$",
+    "seating_capacity": 60,
+    "established_year": 2016,
+    "category": "Fine Dining"
+  }
+}
