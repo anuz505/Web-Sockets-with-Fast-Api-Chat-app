@@ -58,9 +58,13 @@ class ConnectionManager:
     async def send_msg(self, msg: str, websocket: WebSocket):
         await websocket.send_text(msg)
 
-    async def broadcast_messages(self, msg: str, websocket: WebSocket, client_id: int):
+    async def broadcast_messages(self, msg: str):
         for connection in self.active_connections:
-            await connection.send_text(msg)
+            try:
+                await connection.send_text(msg)
+            except:
+                # Remove broken connections
+                self.active_connections.remove(connection)
 
 
 connect_manager = ConnectionManager()
@@ -77,13 +81,8 @@ async def websocket_endpoint(websocket: WebSocket, client_id: int):
     try:
         while True:
             data = await websocket.receive_text()
-            # await connect_manager.send_msg(f"me:", websocket)
-            await connect_manager.broadcast_messages(
-                f"{client_id} : {data}", websocket, client_id
-            )
+            await connect_manager.broadcast_messages(f"{client_id} : {data}")
 
     except WebSocketDisconnect:
         connect_manager.disconnect(websocket)
-        await connect_manager.broadcast_messages(
-            f"{client_id} left the chat", websocket, client_id
-        )
+        await connect_manager.broadcast_messages(f"{client_id} left the chat")
