@@ -1,14 +1,4 @@
 {
-  "R001": {
-    "name": "Spice Garden",
-    "city": "Mumbai",
-    "cuisine": "Indian",
-    "rating": 4.5,
-    "price_range": "$$",
-    "seating_capacity": 80,
-    "established_year": 2015,
-    "category": "Fine Dining"
-  },
   "R002": {
     "name": "The Pasta House",
     "city": "Bangalore",
@@ -48,5 +38,18 @@
     "seating_capacity": 60,
     "established_year": 2016,
     "category": "Fine Dining"
+  },
+  "R008": {
+    "name": "string",
+    "city": "kathmandu",
+    "cuisine": "nepali",
+    "rating": 4.5,
+    "price_range": "$",
+    "seating_capacity": 50,
+    "established_year": 1900,
+    "category": "string",
+    "price_score": 1,
+    "popularity_score": 225.0,
+    "verdict": "Highly Popular"
   }
 }

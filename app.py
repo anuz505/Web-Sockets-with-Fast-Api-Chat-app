@@ -1,6 +1,8 @@
 from fastapi import FastAPI, Path, Query
 import json
 from fastapi.exceptions import HTTPException
+from Restaurant_CLS import Restaurant
+from fastapi.responses import JSONResponse
 
 app = FastAPI()
 
@@ -45,3 +47,45 @@ async def get_a_single_restaurant(
     if id in data:
         return data[id]
     raise HTTPException(status_code=404, detail="Restaurant not found")
+
+
+@app.post("/add")
+async def add_restaurant(restaurant: Restaurant):
+    data = load_json()
+    if restaurant.id in data:
+        raise HTTPException(status_code=400, detail="Hey the restaurant already exists")
+    data[restaurant.id] = restaurant.model_dump(exclude=["id"])
+
+    with open("restaurant.json", "w") as f:
+        json.dump(data, f, indent=2)
+
+
+@app.post("/add")
+async def add_restaurant(restaurant: Restaurant):
+    data = load_json()
+    if restaurant.id in data:
+        raise HTTPException(status_code=400, detail="Hey the restaurant already exists")
+    data[restaurant.id] = restaurant.model_dump(exclude=["id"])
+
+    with open("restaurant.json", "w") as f:
+        json.dump(data, f, indent=2)
+    return JSONResponse(
+        content={"message": "new restaurant added", "id": restaurant.id},
+        status_code=201,
+    )
+
+
+@app.delete("/delete/${id}")
+async def delete_restaurant(
+    id: str = Path(..., description="id of the restaurant", example="R001")
+):
+    data = load_json()
+    if id not in data:
+        raise HTTPException(status_code=404, detail="the restaurant does not exist")
+
+    with open("restaurant.json", "w") as f:
+        del data[id]
+        json.dump(data, f, indent=2)
+    return JSONResponse(
+        content={"message": "resturant deleted", "id": id}, status_code=200
+    )
