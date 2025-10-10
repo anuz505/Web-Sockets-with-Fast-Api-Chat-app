@@ -4,28 +4,40 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 import psycopg2
 from starlette import status
-from passlib.context import CryptContext
+from pwdlib import PasswordHash
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import jwt, JWTError
-from models import CreateUserRequest,User
-from database import get_user_by_email,get_user_by_username, get_db
-router = APIRouter(prefix="/auth", tags=["auth"])
+from models import CreateUserRequest, User
+from database import get_user_by_email, get_user_by_username, get_db
 
-bcryp_context = CryptContext(schemes=["bcrypt"], depricated="auto")
+auth_router = APIRouter(prefix="/auth", tags=["auth"])
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
+password_hash = PasswordHash.recommended()
 
-def password_hash(password:str):
-    return bcryp_context.hash(password)
 
-@router.post("/register",response_model=User)
-async def register(user:CreateUserRequest):
+def get_hash_password(password: str):
+    return password_hash.hash(password)
+
+
+def verify_password(plain_pw: str, hashed_pw):
+    return password_hash.verify(plain_pw, hashed_pw)
+
+
+@auth_router.post("/register", response_model=User)
+async def register(user: CreateUserRequest):
     if get_user_by_username(user.username):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
     if get_user_by_email(user.email):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
-    hash_password = password_hash(user.password)
-    with get_db as conn:
-        cursor = conn.execute("INSERT into users(email,username,password) VALUES (?, ?, ?)",(user.email,user.username,hash_password))
+    hash_password = get_hash_password(user.password)
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO users(email, username, hashed_password) VALUES (%s, %s, %s) RETURNING id",
+            (user.email, user.username, hash_password),
+        )
+        user_id = cursor.fetchone()[0]
         conn.commit()
-        user_id = cursor.lastrowid
-    return User(user_id,user.username,user.email)
+        cursor.close()
+
+    return User(id=user_id, username=user.username, email=user.email)
