@@ -1,10 +1,17 @@
-from pydantic import BaseModel
-from fastapi import Path
+from pydantic import BaseModel,EmailStr, Field
 
 
 class CreateUserRequest(BaseModel):
-    username: str = Path(..., description="name of the user", example="mobius505")
-    password: str = Path(..., description="password", example="whatever")
+    email: EmailStr = Field(...,description="email of the user",example="anuj@gmail.com")
+    username: str = Field(..., description="name of the user", example="mobius505")
+    password: str = Field(..., description="password", example="whatever")
+
+class User(BaseModel):
+    id: int
+    username: str = Field(..., description="name of the user", example="mobius505")
+    email: EmailStr = Field(...,description="email of the user",example="anuj@gmail.com")
+
+
 
 
 class Token(BaseModel):
