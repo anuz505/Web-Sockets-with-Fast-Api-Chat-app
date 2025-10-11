@@ -1,8 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
-import psycopg2
 from starlette import status
 from pwdlib import PasswordHash
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -103,12 +101,14 @@ async def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
 ) -> Token:
     user = authenticate_user(form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="incorrect username",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_accesstoken({"sub": user["username"]}, access_token_expires)
     return Token(access_token=access_token, token_type="bearer")
+
+
+# a sample for protected endpoint
+@auth_router.get("/me", response_model=User)
+async def get_current_user_info(
+    currentuser: Annotated[User, Depends(get_current_user)],
+):
+    return currentuser
