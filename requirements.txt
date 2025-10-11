@@ -1,8 +1,8 @@
 fastapi[standard]
 pydantic
 websockets
-python-jose[cryptography] 
-passlib[bcrypt]
+pyjwt
+pwdlib[argon2]
 python-multipart
 psycopg2-binary
 python-dotenv
