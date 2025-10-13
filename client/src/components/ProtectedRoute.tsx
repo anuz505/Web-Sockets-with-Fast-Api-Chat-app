@@ -1,11 +1,11 @@
 import type { RootState } from "../store/store.ts";
-import React from "react";
-import { useSelector } from "react-redux";
 import { Navigate, Outlet } from "react-router";
+import { useAppSelector } from "../store/hooks/hook.ts";
 const ProtectedRoute = () => {
-  const isAuthenticated = useSelector(
+  const isAuthenticated = useAppSelector(
     (state: RootState) => state.auth.isAuthenticated
   );
+
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
