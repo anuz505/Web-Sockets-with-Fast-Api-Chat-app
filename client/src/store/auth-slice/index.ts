@@ -107,7 +107,7 @@ export const checkAuth = createAsyncThunk<User, void, { rejectValue: string }>(
 export const logoutUser = createAsyncThunk("auth/logout", async () => {
   localStorage.removeItem("access_token");
 });
-
+//auth slice hai
 const authSlice = createSlice({
   name: "auth",
   initialState,
@@ -185,7 +185,7 @@ const authSlice = createSlice({
         state.error = null;
       })
 
-      // Logout User
+      // Logout User hai
       .addCase(logoutUser.fulfilled, (state) => {
         state.isAuthenticated = false;
         state.user = null;
