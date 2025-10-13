@@ -28,7 +28,7 @@ const Login: React.FC = () => {
   // Redirect if already authenticated
   React.useEffect(() => {
     if (isAuthenticated) {
-      navigate("/", { replace: true });
+      navigate("/chat", { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
@@ -80,7 +80,7 @@ const Login: React.FC = () => {
     try {
       const result = await dispatch(loginUser(formData));
       if (loginUser.fulfilled.match(result)) {
-        navigate("/", { replace: true });
+        navigate("/chat", { replace: true });
       }
     } catch (err) {
       console.error("Login failed:", err);

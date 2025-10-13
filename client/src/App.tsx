@@ -10,7 +10,7 @@ function App() {
   return (
     <>
       <Routes>
-        <Route index element={<Home />} />
+        <Route path="/" element={<Home />} />
         <Route element={<AuthLayout />}>
           <Route path="login" element={<Login />} />
           <Route path="register" element={<Register />} />
@@ -18,7 +18,7 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="chat" element={<Chat />} />
         </Route>
-        <Route path="/" element={<Navigate to="/chat" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
   );
