@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router";
 
 const Home: React.FC = () => {
   const [currentQuote, setCurrentQuote] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
-
+  const navigate = useNavigate();
   const sarcasmQuotes = [
     "Finally, a chat app that gets your dry humor.",
     "Where your witty comebacks go to shine... or die trying.",
@@ -93,7 +94,10 @@ const Home: React.FC = () => {
         {/* CTA Section */}
         <div className="space-y-6 sm:space-y-8 px-4">
           <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center">
-            <button className="group bg-black text-white px-8 sm:px-10 md:px-12 py-3 sm:py-4 font-bebas text-lg sm:text-xl tracking-wider hover:bg-gray-800 transition-colors duration-300 w-full sm:w-auto sm:min-w-[200px] max-w-xs sm:max-w-none">
+            <button
+              className="group bg-black text-white px-8 sm:px-10 md:px-12 py-3 sm:py-4 font-bebas text-lg sm:text-xl tracking-wider hover:bg-gray-800 transition-colors duration-300 w-full sm:w-auto sm:min-w-[200px] max-w-xs sm:max-w-none"
+              onClick={() => navigate("/chat")}
+            >
               START CHATTING
               <div className="w-0 group-hover:w-full h-px bg-white transition-all duration-300 mx-auto mt-1"></div>
             </button>

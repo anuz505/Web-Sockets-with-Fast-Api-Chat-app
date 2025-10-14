@@ -25,7 +25,6 @@ const Login: React.FC = () => {
     };
   }, [dispatch]);
 
-  // Redirect if already authenticated
   React.useEffect(() => {
     if (isAuthenticated) {
       navigate("/chat", { replace: true });
@@ -64,7 +63,6 @@ const Login: React.FC = () => {
       }));
     }
 
-    // Clear global error when user starts typing
     if (error) {
       dispatch(clearError());
     }

@@ -1,5 +1,10 @@
+import ShowUser from "./ShowUser";
 const Chat = () => {
-  return <div>YOOOOO</div>;
+  return (
+    <div>
+      <ShowUser />
+    </div>
+  );
 };
 
 export default Chat;
