@@ -1,6 +1,6 @@
 import psycopg2
 from contextlib import contextmanager
-from config import DB_CONFIG
+from core.config import DB_CONFIG
 from typing import Annotated
 from fastapi import Depends
 from pydantic import EmailStr

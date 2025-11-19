@@ -4,10 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from starlette import status
 from pwdlib import PasswordHash
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from models import CreateUserRequest, User, Token, TokenData
-from database import get_user_by_email, get_user_by_username, get_db
+from models.users_model import CreateUserRequest, User, Token, TokenData
+from db.database import get_user_by_email, get_user_by_username, get_db
 import jwt
-from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
+from core.config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 from jwt.exceptions import InvalidTokenError
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
