@@ -1,30 +1,49 @@
-import psycopg2
-from contextlib import contextmanager
-from core.config import DB_CONFIG
-from typing import Annotated
-from fastapi import Depends
+from databases import Database
 from pydantic import EmailStr
+from core.config import settings
+from typing import Optional
+from core.logger import logger
+import asyncpg
 
 
-@contextmanager
-def get_db():
-    connection = psycopg2.connect(**DB_CONFIG)
+db_connection = Database(settings.database_url)
+
+
+async def create_database_if_not_exists():
+    """Create database if it doesn't exist"""
     try:
-        yield connection
-    finally:
-        connection.close()
+        # Connect to default 'postgres' database to check/create our database
+        sys_conn = await asyncpg.connect(
+            host=settings.postgres_host,
+            port=settings.postgres_port,
+            user=settings.postgres_user,
+            password=settings.postgres_password,
+            database="postgres",  # Connect to default database
+        )
+
+        # Check if our database exists
+        exists = await sys_conn.fetchval(
+            "SELECT 1 FROM pg_database WHERE datname = $1", settings.postgres_db
+        )
+
+        if not exists:
+            # Create database (cannot be done in a transaction)
+            await sys_conn.execute(f"CREATE DATABASE {settings.postgres_db}")
+            logger.info(f"Database '{settings.postgres_db}' created")
+        else:
+            logger.info(f"Database '{settings.postgres_db}' already exists")
+
+        await sys_conn.close()
+
+    except Exception as e:
+        logger.error(f" Error creating database: {e}", exc_info=True)
+        raise
 
 
-db_dependency = Annotated[psycopg2.extensions.connection, Depends(get_db)]
-
-
-def init_db():
+async def init_db():
     try:
-        with get_db() as conn:
-            cursor = conn.cursor()
-            cursor.execute("DROP TABLE IF EXISTS users")
-            cursor.execute(
-                """
+        await db_connection.execute(
+            """
                 CREATE TABLE IF NOT EXISTS users (
                     id SERIAL PRIMARY KEY,
                     email TEXT UNIQUE NOT NULL,
@@ -33,38 +52,68 @@ def init_db():
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """
+        )
+        logger.debug("Users table created/verified")
+        # message tables
+        await db_connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS messages (
+                id SERIAL PRIMARY KEY,
+                sender_id INTEGER NOT NULL,
+                reciever_id INTEGER NOT NULL,
+                content TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW(),
+                is_read BOOLEAN DEFAULT FALSE,
+                
+                CONSTRAINT fk_sender FOREIGN KEY (sender_id)
+                    REFERENCES users(id) ON DELETE CASCADE,
+                CONSTRAINT fk_reciever FOREIGN KEY (reciever_id)
+                    REFERENCES users(id) ON DELETE CASCADE
             )
-            conn.commit()
-            cursor.close()
-            print("Database init bhayo hai")
-    except psycopg2.Error as e:
-        print(f"An error occured on the database init: {e}")
+            """
+        )
+        logger.debug("Messages table created/verified")
+        # Create indexes for better query performance
+        await db_connection.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_messages_reciever
+            ON messages(reciever_id, created_at DESC)
+            """
+        )
+        await db_connection.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_messages_sender
+            ON messages(sender_id, created_at DESC)
+            """
+        )
+        logger.debug("Database indexes created/verified")
+
+        logger.info("✅ Database initialization complete")
+    except Exception as e:
+        logger.error(f"❌ Database initialization failed: {e}", exc_info=True)
+        raise
 
 
-def get_user_by_username(username: str):
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users where username = %s", (username,))
-        user = cursor.fetchone()
-
-        if user:
-            columns = [desc[0] for desc in cursor.description]
-            user_dict = dict(zip(columns, user))
-            cursor.close()
-            return user_dict
-        cursor.close()
+async def get_user_by_username(username: str) -> Optional[dict]:
+    try:
+        row = await db_connection.fetch_one(
+            query="SELECT * FROM users WHERE username = :username",
+            values={"username": username},
+        )
+        return dict(row) if row else None
+    except Exception as e:
+        logger.error(
+            f"Error fetching user by username '{username}': {e}", exc_info=True
+        )
         return None
 
 
-def get_user_by_email(email: EmailStr):
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users where email = %s", (email,))
-        user = cursor.fetchone()
-        if user:
-            columns = [desc[0] for desc in cursor.description]
-            user_dict = dict(zip(columns, user))
-            cursor.close()
-            return user_dict
-        cursor.close()
+async def get_user_by_email(email: EmailStr) -> Optional[dict]:
+    try:
+        row = await db_connection.fetch_one(
+            query="SELECT * FROM users WHERE email = :email", values={"email": email}
+        )
+        return dict(row) if row else None
+    except Exception as e:
+        logger.error(f"Error fetching user by email '{email}': {e}", exc_info=True)
         return None

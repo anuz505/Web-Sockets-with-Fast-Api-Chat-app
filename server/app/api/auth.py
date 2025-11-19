@@ -5,7 +5,7 @@ from starlette import status
 from pwdlib import PasswordHash
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from models.users_model import CreateUserRequest, User, Token, TokenData
-from db.database import get_user_by_email, get_user_by_username, get_db
+from db.database import get_user_by_email, get_user_by_username, db_connection
 import jwt
 from core.config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 from jwt.exceptions import InvalidTokenError
@@ -24,8 +24,8 @@ def verify_password(plain_pw: str, hashed_pw):
     return password_hash.verify(plain_pw, hashed_pw)
 
 
-def authenticate_user(username: str, password: str):
-    user_dict = get_user_by_username(username=username)
+async def authenticate_user(username: str, password: str):
+    user_dict = await get_user_by_username(username=username)
     if not user_dict:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="user does not exist"
@@ -64,7 +64,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         token_data = TokenData(username=username)
     except InvalidTokenError:
         raise credentials_exception
-    user = get_user_by_username(token_data.username)
+    user = await get_user_by_username(token_data.username)
     if not user:
         raise credentials_exception
     return user
@@ -72,35 +72,41 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
 
 @auth_router.post("/register", response_model=User)
 async def register(user: CreateUserRequest):
-    if get_user_by_username(user.username):
+    if await get_user_by_username(user.username):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="user already exists with this username",
         )
-    if get_user_by_email(user.email):
+    if await get_user_by_email(user.email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="user already exists with this email",
         )
     hash_password = get_hash_password(user.password)
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO users(email, username, hashed_password) VALUES (%s, %s, %s) RETURNING id",
-            (user.email, user.username, hash_password),
-        )
-        user_id = cursor.fetchone()[0]
-        conn.commit()
-        cursor.close()
+    query = """
+        INSERT INTO users (email, username, hashed_password)
+        VALUES (:email, :username, :hashed_password)
+        RETURNING id, email, username, created_at
+    """
+    new_user = await db_connection.fetch_one(
+        query=query,
+        values={
+            "email": user.email,
+            "username": user.username,
+            "hashed_password": hash_password,
+        },
+    )
 
-    return User(id=user_id, username=user.username, email=user.email)
+    return User(
+        id=new_user["id"], username=new_user["username"], email=new_user["email"]
+    )
 
 
 @auth_router.post("/token", response_model=Token)
 async def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
 ) -> Token:
-    user = authenticate_user(form_data.username, form_data.password)
+    user = await authenticate_user(form_data.username, form_data.password)
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_accesstoken({"sub": user["username"]}, access_token_expires)
     return Token(access_token=access_token, token_type="bearer")

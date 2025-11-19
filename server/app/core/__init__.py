@@ -2,12 +2,14 @@ from .config import (
     SECRET_KEY,
     ALGORITHM,
     ACCESS_TOKEN_EXPIRE_MINUTES,
-    DB_CONFIG,
+    settings,
 )
+from .logger import logger
 
 __all__ = [
     "SECRET_KEY",
     "ALGORITHM",
     "ACCESS_TOKEN_EXPIRE_MINUTES",
-    "DB_CONFIG",
+    "settings",
+    "logger",
 ]
