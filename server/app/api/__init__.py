@@ -7,6 +7,8 @@ from .auth import (
     verify_password,
     oauth2_scheme,
 )
+from .friends import friends_router
+from .websocket import websocket_router
 
 __all__ = [
     "auth_router",
@@ -16,4 +18,6 @@ __all__ = [
     "get_hash_password",
     "verify_password",
     "oauth2_scheme",
+    "websocket_router",
+    "friends_router",
 ]

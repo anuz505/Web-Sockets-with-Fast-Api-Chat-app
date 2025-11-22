@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from api.auth import auth_router
+from api.friends import friends_router
+from api.websocket import websocket_router
 from db.database import init_db, db_connection, create_database_if_not_exists
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
@@ -42,6 +44,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(auth_router)
+app.include_router(websocket_router)
+app.include_router(friends_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,

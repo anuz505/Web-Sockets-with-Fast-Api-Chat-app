@@ -87,6 +87,30 @@ async def init_db():
             """
         )
         logger.debug("Database indexes created/verified")
+        await db_connection.execute(
+            """
+                CREATE TABLE IF NOT EXISTS friendships (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id),
+                friend_id INTEGER REFERENCES users(id),
+                STATUS VARCHAR(20) DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(user_id,friend_id)
+                ); 
+            """
+        )
+        await db_connection.execute(
+            """
+                CREATE INDEX IF NOT EXISTS idx_friendships_user ON friendships(user_id);
+            """
+        )
+        await db_connection.execute(
+            """
+                CREATE INDEX IF NOT EXISTS idx_friendships_friend ON friendships(friend_id);
+            """
+        )
+
+        logger.debug("Friendships table init")
 
         logger.info("✅ Database initialization complete")
     except Exception as e:
