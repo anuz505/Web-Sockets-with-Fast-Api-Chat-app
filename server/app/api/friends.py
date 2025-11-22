@@ -105,8 +105,8 @@ async def block_friend(
         query = """
                     UPDATE friendships
                     SET status='blocked'
-                    WHERE (user_id = :user_id AND friend_id = :friend_id)
-                        OR (user_id = :friend_id AND friend_id = :user_id)
+                    WHERE ((user_id = :user_id AND friend_id = :friend_id)
+                        OR (user_id = :friend_id AND friend_id = :user_id))
                     AND status='accepted'
                     RETURNING id
                 """
@@ -161,8 +161,8 @@ async def remove_friend(
     try:
         query = """
                     DELETE FROM friendships
-                    WHERE (user_id =:user_id AND friend_id = :friend_id)
-                    OR (user_id = :friend_id AND friend_id = :user_id)
+                    WHERE ((user_id =:user_id AND friend_id = :friend_id)
+                    OR (user_id = :friend_id AND friend_id = :user_id))
                     AND status IN ('pending','blocked')
                     RETURNING id
                 """
@@ -178,3 +178,57 @@ async def remove_friend(
     except Exception as e:
         logger.error(f"Error Deleting friend {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to Remove friend")
+
+
+@friends_router.get("/peopleyoumayknow", response_model=list[FriendsProfile])
+async def people_you_may_know(current_user: Annotated[dict, Depends(get_current_user)]):
+    try:
+        query = """
+                    SELECT id, username, 'pending' as friendship_status, NOW() as friendship_created_at 
+                    FROM users
+                    WHERE id != :user_id
+                    AND id NOT IN (
+                        SELECT friend_id FROM friendships WHERE user_id = :user_id
+                        UNION
+                        SELECT user_id FROM friendships WHERE friend_id = :user_id
+                    )
+                    
+                    
+                """
+        people = await db_connection.fetch_all(
+            query=query, values={"user_id": current_user["id"]}
+        )
+        return [FriendsProfile(**person) for person in people]
+
+    except Exception as e:
+        logger.error(f"Something went wrong in fetching people you may know{e}")
+        raise HTTPException(
+            status_code=400,
+            detail="Something went wrong in fetching people you may know",
+        )
+
+
+@friends_router.get("/friendrequests", response_model=list[FriendsProfile])
+async def all_friend_requests(current_user: Annotated[dict, Depends(get_current_user)]):
+    try:
+        query = """
+                    SELECT 
+                        u.id,
+                        u.username,
+                        f.status as friendship_status,
+                        f.created_at as friendship_created_at
+                    FROM friendships f
+                    JOIN users u ON u.id = f.user_id
+                    WHERE f.friend_id = :user_id
+                    AND f.status = 'pending'
+                    ORDER BY f.created_at DESC
+               """
+        friend_requests = await db_connection.fetch_all(
+            query=query, values={"user_id": current_user["id"]}
+        )
+        return [FriendsProfile(**friend_request) for friend_request in friend_requests]
+    except Exception as e:
+        logger.error(f"Something went wrong fetching friendrequests: {e}")
+        raise HTTPException(
+            status_code=400, detail="Something went wrong fetching friendrequests"
+        )
