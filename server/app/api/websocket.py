@@ -122,7 +122,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     await websocket.send_json(
                         {"type": "error", "content": "Failed to save message"}
                     )
-                    continue  # Skip to next message
+                    continue
 
                 message_data = {
                     "id": saved_message["id"],
