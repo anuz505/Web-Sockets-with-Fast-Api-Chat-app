@@ -1,26 +1,27 @@
 import React from "react";
-import { useAppDispatch, useAppSelector } from "../store/hooks/hook";
-import { fetchFriendRequests } from "../store/friends-slice";
-const PeopleYouMayKnow: React.FC = () => {
-  const dispatch = useAppDispatch();
-  const { loading, error, friendRequests } = useAppSelector(
-    (state) => state.friends
-  );
-  React.useEffect(() => {
-    dispatch(fetchFriendRequests());
-  }, [dispatch]);
-  if (loading) {
+import { useQuery } from "@tanstack/react-query";
+import { getFriendRequests } from "../api/fetchFriends";
+const FriendRequests: React.FC = () => {
+  const {
+    status,
+    error,
+    data: friendrequests,
+  } = useQuery({
+    queryKey: ["friendrequests"],
+    queryFn: getFriendRequests,
+  });
+  if (status == "pending") {
     return <div>Loading....</div>;
   }
-  if (error) {
-    return <div>{error}</div>;
+  if (status == "error") {
+    return <div>Error: {error.message}</div>;
   }
-  if (!loading && friendRequests.length === 0) {
+  if (!friendrequests || friendrequests.length === 0) {
     return <div>No Users</div>;
   }
   return (
     <div>
-      {friendRequests.map((friendrequest) => (
+      {friendrequests.map((friendrequest) => (
         <div key={friendrequest.id}>
           {friendrequest.username}
           {friendrequest.friendship_status}
@@ -30,4 +31,4 @@ const PeopleYouMayKnow: React.FC = () => {
   );
 };
 
-export default PeopleYouMayKnow;
+export default FriendRequests;

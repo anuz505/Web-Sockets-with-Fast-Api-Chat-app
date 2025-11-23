@@ -5,14 +5,10 @@ export interface FriendsProfile {
   friendship_created_at: string;
 }
 interface FriendsState {
-  peopleYouMayKnow: FriendsProfile[];
-  friendRequests: FriendsProfile[];
   loading: boolean;
   error: null | string;
 }
 export const initialState: FriendsState = {
-  peopleYouMayKnow: [],
-  friendRequests: [],
   loading: false,
   error: null,
 };
