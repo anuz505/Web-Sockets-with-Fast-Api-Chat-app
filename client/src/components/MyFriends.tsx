@@ -1,17 +1,23 @@
 import React from "react";
-import { useAppDispatch, useAppSelector } from "../store/hooks/hook";
-import { AllFriends } from "../store/friends-slice";
+import { useQuery } from "@tanstack/react-query";
+import { getFriends } from "../api/fetchFriends";
 const MyFriends: React.FC = () => {
-  const dispatch = useAppDispatch();
-  const { loading, error, friends } = useAppSelector((state) => state.friends);
-  React.useEffect(() => {
-    dispatch(AllFriends());
-  }, [dispatch]);
-  if (loading) {
-    return <div>Loading....</div>;
+  const {
+    status,
+    error,
+    data: friends,
+  } = useQuery({
+    queryKey: ["friends"],
+    queryFn: getFriends,
+  });
+  if (status === "pending") {
+    return <h1>Loading bitch</h1>;
   }
-  if (error) {
-    return <div>{error}</div>;
+  if (status === "error") {
+    return <h1>Error: {error.message}</h1>;
+  }
+  if (!friends || friends.length === 0) {
+    return <h1>No Friends</h1>;
   }
   return (
     <div>

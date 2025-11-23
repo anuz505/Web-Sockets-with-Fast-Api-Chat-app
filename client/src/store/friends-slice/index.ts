@@ -7,26 +7,26 @@ import axios from "axios";
 import type { FriendsProfile } from "../../types/friends-types";
 import { initialState } from "../../types/friends-types";
 
-export const AllFriends = createAsyncThunk<FriendsProfile[], void>(
-  "/friends/getAllFriends",
-  async (_, thunkAPI) => {
-    try {
-      const response = await axios.get(
-        "http://localhost:8000/friends/allfriends",
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-          },
-        }
-      );
-      return response.data;
-    } catch (error: any) {
-      return thunkAPI.rejectWithValue(
-        error.response?.data?.detail || "Failed to fetch Friends"
-      );
-    }
-  }
-);
+// export const AllFriends = createAsyncThunk<FriendsProfile[], void>(
+//   "/friends/getAllFriends",
+//   async (_, thunkAPI) => {
+//     try {
+//       const response = await axios.get(
+//         "http://localhost:8000/friends/allfriends",
+//         {
+//           headers: {
+//             Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+//           },
+//         }
+//       );
+//       return response.data;
+//     } catch (error: any) {
+//       return thunkAPI.rejectWithValue(
+//         error.response?.data?.detail || "Failed to fetch Friends"
+//       );
+//     }
+//   }
+// );
 export const fetchPeopleYouMayKnow = createAsyncThunk<FriendsProfile[], void>(
   "/friends/peopleyoumayknow",
   async (_, thunkAPI) => {
@@ -72,18 +72,6 @@ const friendslice = createSlice({
   initialState,
   reducers: {},
   extraReducers: (builder) => {
-    builder.addCase(AllFriends.pending, (state) => {
-      (state.loading = true), (state.error = null);
-    });
-    builder.addCase(AllFriends.fulfilled, (state, action) => {
-      (state.friends = action.payload),
-        (state.loading = false),
-        (state.error = null);
-    });
-    builder.addCase(AllFriends.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.payload as string;
-    });
     builder.addCase(fetchPeopleYouMayKnow.pending, (state) => {
       (state.loading = true), (state.error = null);
     });
