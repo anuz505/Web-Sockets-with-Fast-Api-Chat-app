@@ -7,7 +7,7 @@ class FriendShipResponse(BaseModel):
     id: int
     user_id: int
     friend_id: int
-    status: Literal["pending", "accepted", "blocked"]
+    status: Literal["pending", "accepted", "blocked", "none"]
     created_at: datetime
 
 
@@ -18,5 +18,10 @@ class FriendRequest(BaseModel):
 class FriendsProfile(BaseModel):
     id: int
     username: str
-    friendship_status: Literal["pending", "accepted", "blocked"]
+    friendship_status: Literal["pending", "accepted", "blocked", "none"]
     friendship_created_at: datetime
+
+
+class PeopleYouMayKnow(BaseModel):
+    id: int
+    username: str

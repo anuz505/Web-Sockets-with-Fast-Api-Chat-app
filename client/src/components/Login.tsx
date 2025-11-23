@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate, Link } from "react-router";
+import { useNavigate, Link, useLocation } from "react-router";
 import { useAppDispatch, useAppSelector } from "../store/hooks/hook";
 import { loginUser, clearError } from "../store/auth-slice/index";
 import type { LoginFormData } from "../types/auth-types";
@@ -7,6 +7,7 @@ import type { LoginFormData } from "../types/auth-types";
 const Login: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isLoading, error, isAuthenticated } = useAppSelector(
     (state) => state.auth
   );
@@ -27,7 +28,8 @@ const Login: React.FC = () => {
 
   React.useEffect(() => {
     if (isAuthenticated) {
-      navigate("/chat", { replace: true });
+      const from = location.state?.from?.pathname || "/chat";
+      navigate(from, { replace: true });
     }
   }, [isAuthenticated, navigate]);
 

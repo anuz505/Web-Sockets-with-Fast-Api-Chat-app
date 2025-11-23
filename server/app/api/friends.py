@@ -97,6 +97,39 @@ async def accept_friendrequest(
         raise HTTPException(status_code=500, detail="Failed to accept friend request")
 
 
+@friends_router.patch("/reject/{friend_id}")  # note: path parameters must be scalar hai
+async def reject_friend_request(
+    current_user: Annotated[dict, Depends(get_current_user)], friend_id: int
+):
+    try:
+        if not current_user or not friend_id:
+            raise HTTPException(
+                status_code=404, detail="no user or friend with this id found"
+            )
+
+        query = """
+                UPDATE friendships 
+                SET status='none'
+                WHERE user_id = :friend_id
+                AND friend_id = :user_id
+                AND status = 'pending'
+                RETURNING id
+                """
+        res = await db_connection.fetch_one(
+            query=query,
+            values={"user_id": current_user["id"], "friend_id": friend_id},
+        )
+        if res:
+            return {"success": True, "message": "Friend Request Rejected"}
+        else:
+            raise HTTPException(status_code=404, detail="Friend request not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to reject the friend request {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to accept friend request")
+
+
 @friends_router.patch("/block/{friend_id}")
 async def block_friend(
     current_user: Annotated[dict, Depends(get_current_user)], friend_id: int
@@ -163,7 +196,7 @@ async def remove_friend(
                     DELETE FROM friendships
                     WHERE ((user_id =:user_id AND friend_id = :friend_id)
                     OR (user_id = :friend_id AND friend_id = :user_id))
-                    AND status IN ('pending','blocked')
+                    AND status IN ('pending','blocked','accepted')
                     RETURNING id
                 """
         response = await db_connection.fetch_one(
@@ -184,7 +217,7 @@ async def remove_friend(
 async def people_you_may_know(current_user: Annotated[dict, Depends(get_current_user)]):
     try:
         query = """
-                    SELECT id, username, 'pending' as friendship_status, NOW() as friendship_created_at 
+                    SELECT id, username, 'none' as friendship_status, NOW() as friendship_created_at 
                     FROM users
                     WHERE id != :user_id
                     AND id NOT IN (

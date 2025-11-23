@@ -93,7 +93,7 @@ async def init_db():
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER REFERENCES users(id),
                 friend_id INTEGER REFERENCES users(id),
-                STATUS VARCHAR(20) DEFAULT 'pending',
+                STATUS VARCHAR(20) DEFAULT 'none',
                 created_at TIMESTAMP DEFAULT NOW(),
                 UNIQUE(user_id,friend_id)
                 ); 
