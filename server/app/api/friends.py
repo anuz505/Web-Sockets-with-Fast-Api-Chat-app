@@ -108,8 +108,7 @@ async def reject_friend_request(
             )
 
         query = """
-                UPDATE friendships 
-                SET status='none'
+               DELETE FROM friendships 
                 WHERE user_id = :friend_id
                 AND friend_id = :user_id
                 AND status = 'pending'

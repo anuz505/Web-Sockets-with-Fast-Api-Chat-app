@@ -1,6 +1,7 @@
 import React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getPeopleYouMayKnow } from "../api/fetchFriends";
+import { sendFriendRequest } from "../api/friends";
 const PeopleYouMayKnow: React.FC = () => {
   const {
     status,
@@ -9,6 +10,14 @@ const PeopleYouMayKnow: React.FC = () => {
   } = useQuery({
     queryKey: ["peopleyoumayknow"],
     queryFn: getPeopleYouMayKnow,
+    refetchOnMount: true,
+  });
+  const queryClient = useQueryClient();
+  const { mutate, isPending } = useMutation({
+    mutationFn: sendFriendRequest,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["peopleyoumayknow"] });
+    },
   });
   if (status == "pending") {
     return <div>Loading....</div>;
@@ -23,7 +32,7 @@ const PeopleYouMayKnow: React.FC = () => {
     if (!userId) {
       return;
     }
-    // TODO patch route to send Friend Request http://localhost:8000/friends/sendfriendrequest
+    mutate(userId);
   };
   return (
     <div>
@@ -31,7 +40,12 @@ const PeopleYouMayKnow: React.FC = () => {
         <div key={person.id}>
           {person.username}
           {person.friendship_status}
-          <button>Add Friend</button>
+          <button
+            onClick={() => handleAddfriend(person.id)}
+            disabled={isPending}
+          >
+            Add Friend
+          </button>
         </div>
       ))}
     </div>

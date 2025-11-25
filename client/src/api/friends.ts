@@ -1,20 +1,16 @@
 import axios, { AxiosError } from "axios";
-import type { FriendsProfile } from "../types/friends-types";
-export interface ApiError {
-  message?: string;
-  detail?: string;
-}
-export async function getFriends() {
+import type { ApiError } from "./fetchFriends";
+
+export async function sendFriendRequest(friendId: number) {
   try {
-    const token = localStorage.getItem("access_token");
+    const token: string | null = localStorage.getItem("access_token");
     if (!token) {
-      throw new Error("Authentication required. Please log in.");
+      throw new Error("Authentication required. Please log in");
     }
-    const response = await axios.get<FriendsProfile[]>(
-      "http://localhost:8000/friends/allfriends",
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
+    const response = await axios.post(
+      "http://localhost:8000/friends/send_friend_request",
+      { id: friendId },
+      { headers: { Authorization: `Bearer ${token}` } }
     );
     return response.data;
   } catch (error) {
@@ -23,57 +19,56 @@ export async function getFriends() {
       throw new Error(
         axiosError.response?.data?.message ||
           axiosError.response?.data?.detail ||
-          "Failed to fetch friends. Please try again."
+          "Failed to send Friend Request. Please try again."
+      );
+    }
+  }
+}
+export async function acceptFriendRequest(friendId: number) {
+  try {
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      throw new Error("Authentication required. Please log in");
+    }
+    await axios.patch(
+      `http://localhost:8000/friends/accept/${friendId}`, // ✅ PATCH with path parameter
+      {}, // Empty body for PATCH
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const axiosError = error as AxiosError<ApiError>;
+      throw new Error(
+        axiosError.response?.data?.message ||
+          axiosError.response?.data?.detail ||
+          "Failed to accept Friend Request Please try again."
       );
     }
   }
 }
 
-export async function getPeopleYouMayKnow() {
+export async function rejectFriendRequest(friendId: number) {
   try {
     const token = localStorage.getItem("access_token");
     if (!token) {
-      throw new Error("Authentication required. Please log in.");
+      throw new Error("Authentication required. Please log in");
     }
-    const response = await axios.get<FriendsProfile[]>(
-      "http://localhost:8000/friends/peopleyoumayknow",
+    await axios.patch(
+      `http://localhost:8000/friends/reject/${friendId}`,
+      {},
       {
         headers: { Authorization: `Bearer ${token}` },
       }
     );
-    return response.data;
   } catch (error) {
     if (axios.isAxiosError(error)) {
       const axiosError = error as AxiosError<ApiError>;
       throw new Error(
         axiosError.response?.data?.message ||
           axiosError.response?.data?.detail ||
-          "Failed to fetch friends. Please try again."
-      );
-    }
-  }
-}
-
-export async function getFriendRequests() {
-  try {
-    const token = localStorage.getItem("access_token");
-    if (!token) {
-      throw new Error("Authentication required. Please log in.");
-    }
-    const response = await axios.get<FriendsProfile[]>(
-      "http://localhost:8000/friends/friendrequests",
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    return response.data;
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      const axiosError = error as AxiosError<ApiError>;
-      throw new Error(
-        axiosError.response?.data?.message ||
-          axiosError.response?.data?.detail ||
-          "Failed to fetch friends. Please try again."
+          "Failed to accept Friend Request Please try again."
       );
     }
   }

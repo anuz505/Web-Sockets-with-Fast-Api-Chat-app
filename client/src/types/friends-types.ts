@@ -4,11 +4,10 @@ export interface FriendsProfile {
   friendship_status: string;
   friendship_created_at: string;
 }
-interface FriendsState {
-  loading: boolean;
-  error: null | string;
+
+export interface FriendShipResponse {
+  id: number;
+  user_id: number;
+  friend_id: string;
+  created_at: Date;
 }
-export const initialState: FriendsState = {
-  loading: false,
-  error: null,
-};

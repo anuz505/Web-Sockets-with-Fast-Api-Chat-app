@@ -1,12 +1,16 @@
 // testing auth
 
 import React from "react";
-import { useAppSelector } from "../store/hooks/hook";
-
+import { logoutUser } from "../store/auth-slice";
+import { useAppSelector, useAppDispatch } from "../store/hooks/hook";
 const ShowUser = () => {
   const { user, isAuthenticated, isLoading } = useAppSelector(
     (state) => state.auth
   );
+  const dispatch = useAppDispatch();
+  const handleLogout = () => {
+    dispatch(logoutUser());
+  };
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-4">
@@ -28,7 +32,6 @@ const ShowUser = () => {
           User Profile
         </h2>
       </div>
-
       <div className="space-y-3">
         <div className="flex items-center justify-between p-3 bg-muted rounded-md">
           <span className="font-medium text-muted-foreground">Username:</span>
@@ -49,7 +52,6 @@ const ShowUser = () => {
           </div>
         )}
       </div>
-
       <div className="pt-4 border-t">
         <div className="flex justify-center">
           <div className="flex items-center space-x-2">
@@ -58,6 +60,14 @@ const ShowUser = () => {
           </div>
         </div>
       </div>
+      <div className="pt-4">
+        <button
+          onClick={handleLogout}
+          className="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-md transition-colors"
+        >
+          Logout
+        </button>
+      </div>{" "}
     </div>
   );
 };
