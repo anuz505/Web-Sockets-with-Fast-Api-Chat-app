@@ -9,6 +9,8 @@ import Chat from "./components/Chat.tsx";
 import MyFriends from "./components/MyFriends.tsx";
 import PeopleYouMayKnow from "./components/PeopleYouMayKnow.tsx";
 import FriendRequests from "./components/FriendRequests.tsx";
+import AppLayout from "./components/layout/AppLayout.tsx";
+import ShowUser from "./components/ShowUser.tsx";
 function App() {
   return (
     <>
@@ -19,10 +21,13 @@ function App() {
           <Route path="register" element={<Register />} />
         </Route>
         <Route element={<ProtectedRoute />}>
-          <Route path="allfriends" element={<MyFriends />} />
-          <Route path="chat" element={<Chat />} />
-          <Route path="peopleyoumayknow" element={<PeopleYouMayKnow />} />
-          <Route path="friendrequests" element={<FriendRequests />} />
+          <Route element={<AppLayout />}>
+            <Route path="friends" element={<MyFriends />} />
+            <Route path="chat" element={<Chat />} />
+            <Route path="discover" element={<PeopleYouMayKnow />} />
+            <Route path="friend-requests" element={<FriendRequests />} />
+            <Route path="profile" element={<ShowUser />} />
+          </Route>
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
