@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-
+import Navbar from "./common/Navbar";
 const Home: React.FC = () => {
   const [currentQuote, setCurrentQuote] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
@@ -28,6 +28,8 @@ const Home: React.FC = () => {
   return (
     <div className="min-h-screen bg-white text-black flex items-center justify-center px-4 py-8 sm:px-6 md:px-8 lg:px-12">
       <div className="max-w-7xl w-full text-center space-y-12 sm:space-y-16 lg:space-y-20">
+        <Navbar />
+
         {/* Logo section */}
         <div className="space-y-4 sm:space-y-6">
           <h1 className="font-bebas text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl tracking-wider leading-none">

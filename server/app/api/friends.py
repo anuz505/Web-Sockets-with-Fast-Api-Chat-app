@@ -38,10 +38,19 @@ async def send_friend_request(
             query=check_exists_query,
             values={"user_id": current_user["id"], "friend_id": friend_request.id},
         )
-        if exists:
+
+        # Only block if a valid status exists (not NULL, 'none', or 'rejected')
+        if exists and exists["status"] not in (None, "none", "rejected"):
             raise HTTPException(
                 status_code=400,
-                detail=f"Friend request already exists {exists['status']}",
+                detail=f"Friend request already exists with status: {exists['status']}",
+            )
+
+        # If NULL, 'none', or 'rejected' status exists, delete it first before inserting new request
+        if exists and exists["status"] in (None, "none", "rejected"):
+            await db_connection.execute(
+                query="DELETE FROM friendships WHERE id = :id",
+                values={"id": exists["id"]},
             )
 
         try:
@@ -260,7 +269,5 @@ async def all_friend_requests(current_user: Annotated[dict, Depends(get_current_
         )
         return [FriendsProfile(**friend_request) for friend_request in friend_requests]
     except Exception as e:
-        logger.error(f"Something went wrong fetching friendrequests: {e}")
-        raise HTTPException(
-            status_code=400, detail="Something went wrong fetching friendrequests"
-        )
+        logger.error(f"Error fetching friend requests {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch friend requests")
