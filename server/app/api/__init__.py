@@ -9,6 +9,7 @@ from .auth import (
 )
 from .friends import friends_router
 from .websocket import websocket_router
+from .message import get_messages
 
 __all__ = [
     "auth_router",
@@ -20,4 +21,5 @@ __all__ = [
     "oauth2_scheme",
     "websocket_router",
     "friends_router",
+    "get_messages",
 ]

@@ -111,6 +111,19 @@ async def init_db():
         )
 
         logger.debug("Friendships table init")
+        # conversations
+        await db_connection.execute(
+            """
+                                    CREATE TABLE IF NOT EXISTS conversations (
+                                    id SERIAL PRIMARY KEY,
+                                    sender_id INTEGER REFERENCES users(id),
+                                    recierver_id INTEGER REFERENCES users(id),
+                                    content varchar(200),
+                                    created_at TIMESTAMP DEFAULT NOW(),
+                                    is_read BOOLEAN DEFAULT FALSE)
+                                    """
+        )
+        logger.debug("Conversations table init")
 
         logger.info("✅ Database initialization complete")
     except Exception as e:
