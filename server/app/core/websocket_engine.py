@@ -11,7 +11,6 @@ class ConnectionManager:
         # self.user_friends: Dict[int, Set[int]] = {}
 
     async def connect(self, user_id, websocket: WebSocket):
-        await websocket.accept()
         self.active_connections[user_id] = websocket
         # await self.broadcast_status(user_id, "online")
 
@@ -26,7 +25,7 @@ class ConnectionManager:
                 websocket = self.active_connections[reciever_id]
                 await websocket.send_json(
                     {
-                        "type": "message",
+                        "type": "new_message",
                         **msg,
                     }
                 )
