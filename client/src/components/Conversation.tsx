@@ -1,14 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getAllConversations } from "../api/conversations.ts";
 import Loader from "./common/Loader.tsx";
 import { HiArrowLeft } from "react-icons/hi2";
 import type { ConversationType } from "../types/conversations-types.ts";
+import { useWebSocket } from "../hooks/Websocket.ts";
 
 const Conversation: React.FC = () => {
   const {
     status,
-    error,
+    error: queryError,
     data: conversations,
   } = useQuery({
     queryKey: ["conversations"],
@@ -17,6 +18,17 @@ const Conversation: React.FC = () => {
   const [selectedConversation, setselectedConversation] =
     useState<ConversationType | null>(null);
   const [showConversation, setShowConversation] = useState(false);
+  const token = localStorage.getItem("access_token");
+  const {
+    isAuthenticated,
+    user,
+    error: wsError,
+    sendMessage,
+    message,
+    connectionStatus,
+  } = useWebSocket(token);
+  const [inputMessage, setInputMessage] = useState("");
+  const messageEndRef = useRef<HTMLDivElement>(null);
 
   const handleFriendClick = (conversation: ConversationType) => {
     setselectedConversation(conversation);
@@ -27,6 +39,24 @@ const Conversation: React.FC = () => {
     setShowConversation(false);
     setselectedConversation(null);
   };
+  const conversationMessages = message.filter(
+    (msg) =>
+      (msg.sender_id === user?.id &&
+        msg.reciever_id === selectedConversation?.other_user_id) ||
+      (msg.sender_id === selectedConversation?.other_user_id &&
+        msg.reciever_id === user?.id)
+  );
+  useEffect(() => {
+    messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [message]);
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputMessage.trim() || !isAuthenticated || !selectedConversation) {
+      return;
+    }
+    sendMessage(selectedConversation?.other_user_id, inputMessage.trim());
+    setInputMessage("");
+  };
   if (status === "pending") {
     return <Loader />;
   }
@@ -35,7 +65,7 @@ const Conversation: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen bg-gray-500">
         <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
           <h2 className="text-red-800 text-xl font-semibold mb-2">Error</h2>
-          <p className="text-red-600">{error.message}</p>
+          <p className="text-red-600">{queryError.message}</p>
         </div>
       </div>
     );
@@ -138,17 +168,77 @@ const Conversation: React.FC = () => {
                 </div>
               </div>
             </div>
+            {/* here i need to  */}
+            <div className="px-6 py-4 bg-gray-50">
+              {conversationMessages.length === 0 ? (
+                <div className="flex items-center justify-center h-full text-gray-500">
+                  <p>No messages yet. Start the convo</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {conversationMessages.map((msg) => {
+                    const isSentByMe = msg.sender_id === user?.id;
 
-            {/* Conversation Content */}
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <p className="text-lg text-gray-700">
-                  Chat with {selectedConversation.username}
-                </p>
-                <p className="text-sm text-gray-500 mt-2">
-                  Conversation view coming soon...
-                </p>
-              </div>
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`flex ${
+                          isSentByMe ? "justify-end" : "justify-start"
+                        }`}
+                      >
+                        <div
+                          className={`max-ws-xs lg:max-w-md px-4 py-2 rounded-lg shadow ${
+                            isSentByMe
+                              ? "bg-black text-white rounded-br-none"
+                              : "bg-white text-gray-800 rounded-bl-none"
+                          }`}
+                        >
+                          <p className="break-words">{msg.content}</p>
+                          <p
+                            className={`text-xs mt-1 ${
+                              isSentByMe ? "text-blue-200" : "text-gray-500"
+                            }`}
+                          >
+                            {new Date(msg.created_at).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                            {isSentByMe && (
+                              <span className="ml-2">
+                                {msg.is_read ? "✓✓" : "✓"}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div ref={messageEndRef} />
+                </div>
+              )}
+            </div>
+
+            {/* inputForm */}
+            <div className="border-t border-gray-200 bg-white px-6 py-4">
+              <form onSubmit={handleSendMessage} className="flex gap-3">
+                <input
+                  type="text"
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  placeholder={
+                    isAuthenticated ? "type a message" : "connecting..."
+                  }
+                  disabled={!isAuthenticated}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                />
+                <button
+                  type="submit"
+                  disabled={!isAuthenticated || !inputMessage.trim()}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                >
+                  Send
+                </button>
+              </form>
             </div>
           </>
         ) : (

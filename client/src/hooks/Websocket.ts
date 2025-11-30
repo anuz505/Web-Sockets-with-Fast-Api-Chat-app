@@ -43,9 +43,9 @@ export const useWebSocket = (token: string | null): UseWebSocketReturn => {
     ws.current.onopen = () => {
       setIsConnected(true);
       setConnectionStatus("connected");
+      ws.current?.send(JSON.stringify({ type: "auth", content: token }));
     };
     // send the auth token first for validation
-    ws.current?.send(JSON.stringify({ type: "auth", content: token }));
 
     // heartbeat
     pingIntervalRef.current = setInterval(() => {
