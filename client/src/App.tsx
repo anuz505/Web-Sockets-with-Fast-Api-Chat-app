@@ -21,8 +21,8 @@ function App() {
           <Route path="register" element={<Register />} />
         </Route>
         <Route element={<ProtectedRoute />}>
+          <Route path="chat" element={<Conversation />} />
           <Route element={<AppLayout />}>
-            <Route path="chat" element={<Conversation />} />
             <Route path="friends" element={<MyFriends />} />
             <Route path="discover" element={<PeopleYouMayKnow />} />
             <Route path="friend-requests" element={<FriendRequests />} />

@@ -27,7 +27,7 @@ const Navbar = () => {
             className="font-medium text-2xl flex items-center gap-2"
           >
             <HiOutlineChatBubbleLeftRight className="h-7 w-7" />
-            ChatApp
+            Sarcasm Sync
           </Link>
         </div>
 

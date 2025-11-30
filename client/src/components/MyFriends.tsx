@@ -15,7 +15,7 @@ const MyFriends: React.FC = () => {
   });
 
   if (status === "pending") {
-    return <Loader />;
+    return <Loader text="friends" />;
   }
 
   if (status === "error") {

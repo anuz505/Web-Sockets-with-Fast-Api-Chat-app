@@ -1,6 +1,7 @@
 import React, { useEffect, memo } from "react";
 import Navbar from "./Navbar";
-const Loader: React.FC = memo(() => {
+import type LoaderProps from "../../types/utils-types";
+const Loader: React.FC<LoaderProps> = memo(({ text = "" }) => {
   useEffect(() => {
     // Store original values for cleanup
     const originalBodyOverflow = document.body.style.overflow;
@@ -29,7 +30,7 @@ const Loader: React.FC = memo(() => {
       <div className="fixed inset-0 bg-white flex flex-col items-center justify-center z-[9999] px-4 overflow-hidden">
         {/* CSS spinner */}
         <div className="css-spinner"></div>
-        <p className="mt-4 text-gray-600 text-lg">Loading friends...</p>
+        <p className="mt-4 text-gray-600 text-lg">Loading {text}...</p>
 
         <style>{`
         .css-spinner {
