@@ -20,7 +20,7 @@ export const RegisterUser = createAsyncThunk<
 >("/auth/register", async (formData, thunkAPI) => {
   try {
     const response = await axios.post(
-      "http://127.0.0.1:8000/auth/register",
+      "http://127.0.0.1:8080/auth/register",
       formData,
       {
         withCredentials: true,
@@ -45,7 +45,7 @@ export const loginUser = createAsyncThunk<
     params.append("password", formData.password);
 
     const loginResponse = await axios.post<AuthResponse>(
-      "http://127.0.0.1:8000/auth/token",
+      "http://127.0.0.1:8080/auth/token",
       params,
       {
         headers: {
@@ -55,7 +55,7 @@ export const loginUser = createAsyncThunk<
     );
     const token = loginResponse.data?.access_token;
     const userResponse = await axios.get<User>(
-      "http://127.0.0.1:8000/auth/me",
+      "http://127.0.0.1:8080/auth/me",
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -85,7 +85,7 @@ export const checkAuth = createAsyncThunk<User, void, { rejectValue: string }>(
         return thunkAPI.rejectWithValue("No token found");
       }
 
-      const response = await axios.get<User>(`http://127.0.0.1:8000/auth/me`, {
+      const response = await axios.get<User>(`http://127.0.0.1:8080/auth/me`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

@@ -1,32 +1,6 @@
 version: "3.9"
 
 services:
-  backend1:
-    build:
-      context: .
-      dockerfile: ./server/Dockerfile
-    container_name: chat_backend
-    ports:
-      - "4001:8000"
-
-    environment:
-      # Database
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: chat-app
-      PYTHONUNBUFFERED: 1
-      # Redis
-      # REDIS_HOST: redis
-    depends_on:
-      postgres:
-        condition: service_healthy
-    volumes:
-      - ./app:/app/app
-    networks:
-      - chat-network
-    restart: unless-stopped
   postgres:
     image: postgres:15-alpine
     container_name: chat_postgres
@@ -46,6 +20,88 @@ services:
     networks:
       - chat-network
     restart: unless-stopped
+  backend1:
+    build:
+      context: .
+      dockerfile: ./server/Dockerfile
+    container_name: chat_backend_1
+    ports:
+      - "4001:8000"
+    environment:
+      # Database
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: chat-app
+      PYTHONUNBUFFERED: 1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - chat-network
+    restart: unless-stopped
+  backend2:
+    build:
+      context: .
+      dockerfile: ./server/Dockerfile
+    container_name: chat_backend_2
+    ports:
+      - "4002:8000"
+    environment:
+      # Database
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: chat-app
+      PYTHONUNBUFFERED: 1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - chat-network
+    restart: unless-stopped
+
+  backend3:
+    build:
+      context: .
+      dockerfile: ./server/Dockerfile
+    container_name: chat_backend_3
+    ports:
+      - "4003:8000"
+    environment:
+      # Database
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: chat-app
+      PYTHONUNBUFFERED: 1
+      # Redis
+      # REDIS_HOST: redis
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./app:/app/app
+    networks:
+      - chat-network
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx-sarcasm-sync
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend1
+      - backend2
+      - backend3
+    networks:
+      - chat-network
 
 volumes:
   postgres_data:

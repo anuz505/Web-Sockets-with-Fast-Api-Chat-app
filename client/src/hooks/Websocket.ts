@@ -37,7 +37,7 @@ export const useWebSocket = (token: string | null): UseWebSocketReturn => {
     setError(null);
 
     // ws connection
-    const wsURL = "ws://localhost:8000/ws";
+    const wsURL = "ws://localhost:8080/ws";
     ws.current = new WebSocket(wsURL);
     //ws connected
     ws.current.onopen = () => {
