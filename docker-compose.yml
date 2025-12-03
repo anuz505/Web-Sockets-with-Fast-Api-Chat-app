@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   postgres:
     image: postgres:15-alpine
@@ -20,6 +18,23 @@ services:
     networks:
       - chat-network
     restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis_chat_app
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - chat-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend1:
     build:
       context: .
@@ -34,9 +49,14 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: chat-app
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 1
       PYTHONUNBUFFERED: 1
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - chat-network
@@ -55,9 +75,14 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: chat-app
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 1
       PYTHONUNBUFFERED: 1
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - chat-network
@@ -77,11 +102,16 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: chat-app
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 1
       PYTHONUNBUFFERED: 1
       # Redis
       # REDIS_HOST: redis
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     volumes:
       - ./app:/app/app
@@ -105,6 +135,8 @@ services:
 
 volumes:
   postgres_data:
+    driver: local
+  redis_data:
     driver: local
 
 networks:
