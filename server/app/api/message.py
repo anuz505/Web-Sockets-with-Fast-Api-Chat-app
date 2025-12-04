@@ -40,6 +40,30 @@ async def get_messages(
         HTTPException(status_code=404, detail=f"Error retrieving messages {e}")
 
 
+@message_router.delete("/conversations/{other_user_id}")
+async def delete_conversation(
+    other_user_id: int, current_user: dict = Depends(get_current_user)
+):
+    try:
+        user_id = current_user["id"]
+        query = """
+                DELETE FROM messages
+                WHERE (sender_id = :user_id AND reciever_id = :other_user_id) 
+                OR (sender_id = :other_user_id AND reciever_id = :user_id)
+                """
+        result = await db_connection.execute(
+            query=query, values={"user_id": user_id, "other_user_id": other_user_id}
+        )
+        return {
+            "message": "Conversation deleted successfully",
+            "deleted_messages": result,
+        }
+
+    except Exception as e:
+        logger.error(f"Error while deleting conversation: {e}")
+        HTTPException(status_code=400, detail=f"Error while deleting conversation {e}")
+
+
 @message_router.get("/conversations")
 async def get_conversations(
     limit: int = 50, offset: int = 0, current_user: dict = Depends(get_current_user)

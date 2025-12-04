@@ -175,6 +175,8 @@ async def websocket_endpoint(websocket: WebSocket):
 
     except WebSocketDisconnect:
         if user_id:
+            user_channel = redis_service.get_user_channel(user_id)
+            await redis_service.unsubscribe_from_channel(user_channel)
             await manager.disconnect(user_id)
             logger.info(f"websocket disconnected by user {user_id}")
         else:
@@ -182,8 +184,8 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         logger.error(f"WebSocket error: {e}", exc_info=True)
         if user_id:
-            await manager.disconnect(user_id)
-            await redis_service.get_user_channel(user_id)
+            user_channel = redis_service.get_user_channel(user_id)
+            await redis_service.unsubscribe_from_channel(user_channel)
             await manager.disconnect(user_id)
         try:
             await websocket.close(code=1011, reason="Internal error")

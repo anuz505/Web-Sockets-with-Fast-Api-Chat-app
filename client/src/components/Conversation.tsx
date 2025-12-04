@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getAllConversations,
   retrieverChatHistory,
 } from "../api/conversations.ts";
+import { getFriends } from "../api/fetchFriends.ts";
+import type { FriendsProfile } from "../types/friends-types.ts";
 import Loader from "./common/Loader.tsx";
 import { HiArrowLeft } from "react-icons/hi2";
 import type {
@@ -13,6 +15,8 @@ import type {
 import { useWebSocket } from "../hooks/Websocket.ts";
 import Navbar from "./common/Navbar.tsx";
 const Conversation: React.FC = () => {
+  const queryClient = useQueryClient();
+
   // list of conversations
   const {
     status: listConvStatus,
@@ -23,9 +27,20 @@ const Conversation: React.FC = () => {
     queryFn: getAllConversations,
   });
 
+  const {
+    status: friendsStatus,
+    error: friendsError,
+    data: friends,
+  } = useQuery({
+    queryKey: ["friends"],
+    queryFn: getFriends,
+    enabled: true,
+  });
+
   const [selectedConversation, setselectedConversation] =
     useState<ConversationType | null>(null);
   const [showConversation, setShowConversation] = useState(false);
+  const [showNewChatModal, setShowNewChatModal] = useState(false);
 
   // token
   const token = localStorage.getItem("access_token");
@@ -70,21 +85,18 @@ const Conversation: React.FC = () => {
     // Merge and deduplicate based on message ID
     const messageMap = new Map<number, Message>();
 
-    // Add historical messages first
     historical.forEach((msg) => {
       if (msg.id) {
         messageMap.set(msg.id, msg);
       }
     });
 
-    // Add or update with WebSocket messages (they might be newer or updates)
     wsConversationMessages.forEach((msg) => {
       if (msg.id) {
         messageMap.set(msg.id, msg);
       }
     });
 
-    // Convert back to array and sort by created_at
     return Array.from(messageMap.values()).sort(
       (a, b) =>
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
@@ -101,6 +113,17 @@ const Conversation: React.FC = () => {
     setShowConversation(true);
   };
 
+  const handleStartChatWithFriend = (friend: FriendsProfile) => {
+    setselectedConversation({
+      other_user_id: friend.id,
+      username: friend.username,
+      last_message: "",
+      last_message_time: new Date(),
+    });
+    setShowConversation(true);
+    setShowNewChatModal(false);
+  };
+
   const handleBackToList = () => {
     setShowConversation(false);
     setselectedConversation(null);
@@ -109,6 +132,18 @@ const Conversation: React.FC = () => {
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [conversationMessages]);
+
+  // Invalidate conversations when new WebSocket messages arrive - DEBOUNCED
+  useEffect(() => {
+    if (wsMessages.length > 0) {
+      // Debounce the invalidation to avoid excessive refetches
+      const timeoutId = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      }, 1000);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [wsMessages.length, queryClient]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -134,28 +169,83 @@ const Conversation: React.FC = () => {
     );
   }
 
-  // no conversations
-  if (!conversations || conversations.length === 0) {
+  // no conversations - show friends list instead
+  if ((!conversations || conversations.length === 0) && !selectedConversation) {
+    if (friendsStatus === "pending") return <Loader text="friends" />;
+
+    if (friendsStatus === "error") {
+      return (
+        <div className="flex items-center justify-center min-h-screen bg-gray-50">
+          <div className="text-center">
+            <h2 className="text-2xl font-semibold text-red-600">
+              Error loading friends
+            </h2>
+            <p className="mt-2 text-gray-500">{friendsError?.message}</p>
+          </div>
+        </div>
+      );
+    }
+
+    // Show friends list
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <svg
-            className="mx-auto h-24 w-24 text-gray-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-            />
-          </svg>
-          <h2 className="mt-4 text-2xl font-semibold text-gray-700">
-            No Conversations Yet
-          </h2>
-          <p className="mt-2 text-gray-500">Start connecting with people!</p>
+      <div className="flex h-screen flex-col">
+        <Navbar />
+
+        <div className="p-6">
+          <h2 className="text-2xl font-bold text-gray-900">Start a Chat</h2>
+          <p className="text-gray-500 mt-1">
+            Select a friend to begin messaging.
+          </p>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {friends && friends.length > 0 ? (
+            friends.map((friend) => (
+              <div
+                key={friend.id}
+                onClick={() => handleStartChatWithFriend(friend)}
+                className="p-4 cursor-pointer border-b hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="h-12 w-12 bg-black text-white flex items-center justify-center rounded-full font-semibold text-lg">
+                    {friend.username.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-lg font-medium text-gray-900">
+                      {friend.username}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Click to start chatting
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <svg
+                  className="mx-auto h-24 w-24 text-gray-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+                <h2 className="mt-4 text-2xl font-semibold text-gray-700">
+                  No Friends Yet
+                </h2>
+                <p className="mt-2 text-gray-500">
+                  Add friends to start chatting!
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -165,52 +255,116 @@ const Conversation: React.FC = () => {
     <>
       <Navbar />
       <div className="flex h-screen bg-white">
-        {/* Sidebar with friends list - Hidden on mobile when conversation is shown */}
         <div
           className={`${
             showConversation ? "hidden" : "flex"
           } md:flex w-full md:w-80 border-r border-gray-200 flex-col`}
         >
-          {/* Header */}
           <div className="p-4 border-b border-gray-200">
-            <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
+            <div className="flex items-center justify-between mb-2">
+              <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
+              <button
+                onClick={() => setShowNewChatModal(true)}
+                className="p-2 bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
+                title="New Chat"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+              </button>
+            </div>
             <p className="mt-1 text-sm text-gray-500">
-              {conversations.length} friends
+              {conversations && conversations.length > 0
+                ? `${conversations.length} conversation${
+                    conversations.length !== 1 ? "s" : ""
+                  }`
+                : "Start a new chat"}
             </p>
           </div>
 
-          {/* Conversations list */}
           <div className="flex-1 overflow-y-auto">
-            {conversations.map((conversation) => (
-              <div
-                key={conversation.other_user_id}
-                onClick={() => handleFriendClick(conversation)}
-                className={`p-4 cursor-pointer transition-colors hover:bg-gray-50 border-b border-gray-100 ${
-                  selectedConversation?.other_user_id ===
-                  conversation.other_user_id
-                    ? "bg-blue-50"
-                    : ""
-                }`}
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="flex-shrink-0">
-                    <div className="h-12 w-12 rounded-full bg-black flex items-center justify-center text-white font-semibold text-lg">
-                      {conversation.username.charAt(0).toUpperCase()}
+            {conversations && conversations.length > 0 ? (
+              // Show conversations list
+              conversations.map((conversation) => (
+                <div
+                  key={conversation.other_user_id}
+                  onClick={() => handleFriendClick(conversation)}
+                  className={`p-4 cursor-pointer transition-colors hover:bg-gray-50 border-b border-gray-100 ${
+                    selectedConversation?.other_user_id ===
+                    conversation.other_user_id
+                      ? "bg-blue-50"
+                      : ""
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="flex-shrink-0">
+                      <div className="h-12 w-12 rounded-full bg-black flex items-center justify-center text-white font-semibold text-lg">
+                        {conversation.username.charAt(0).toUpperCase()}
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">
+                        {conversation.username}
+                      </p>
+                      {conversation.last_message && (
+                        <p className="text-xs text-gray-500 truncate">
+                          {conversation.last_message}
+                        </p>
+                      )}
                     </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">
-                      {conversation.username}
-                    </p>
-                    {conversation.last_message && (
-                      <p className="text-xs text-gray-500 truncate">
-                        {conversation.last_message}
+                </div>
+              ))
+            ) : friendsStatus === "pending" ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader text="friends" />
+              </div>
+            ) : friends && friends.length > 0 ? (
+              friends.map((friend) => (
+                <div
+                  key={friend.id}
+                  onClick={() => handleStartChatWithFriend(friend)}
+                  className={`p-4 cursor-pointer transition-colors hover:bg-gray-50 border-b border-gray-100 ${
+                    selectedConversation?.other_user_id === friend.id
+                      ? "bg-blue-50"
+                      : ""
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="flex-shrink-0">
+                      <div className="h-12 w-12 rounded-full bg-black flex items-center justify-center text-white font-semibold text-lg">
+                        {friend.username.charAt(0).toUpperCase()}
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">
+                        {friend.username}
                       </p>
-                    )}
+                      <p className="text-xs text-gray-500">
+                        Click to start chatting
+                      </p>
+                    </div>
                   </div>
                 </div>
+              ))
+            ) : (
+              // No friends
+              <div className="flex items-center justify-center h-full p-6">
+                <div className="text-center">
+                  <p className="text-gray-500">No friends to chat with</p>
+                </div>
               </div>
-            ))}
+            )}
           </div>
         </div>
 
@@ -222,14 +376,17 @@ const Conversation: React.FC = () => {
         >
           {selectedConversation ? (
             <>
-              {/* Conversation Header with Back Button (Mobile only) */}
-              <div className="md:hidden p-4 bg-white border-b border-gray-200 flex items-center space-x-3">
+              {/* Conversation Header - Desktop and Mobile */}
+              <div className="p-4 bg-white border-b border-gray-200 flex items-center space-x-3">
+                {/* Back Button (Mobile only) */}
                 <button
                   onClick={handleBackToList}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  className="md:hidden p-2 hover:bg-gray-100 rounded-full transition-colors"
                 >
                   <HiArrowLeft className="h-6 w-6 text-gray-700" />
                 </button>
+
+                {/* User Info */}
                 <div className="flex items-center space-x-3">
                   <div className="h-10 w-10 rounded-full bg-black flex items-center justify-center text-white font-semibold">
                     {selectedConversation.username.charAt(0).toUpperCase()}
@@ -248,7 +405,7 @@ const Conversation: React.FC = () => {
               </div>
 
               {/* Messages Area */}
-              <div className="flex-1 overflow-y-auto px-6 py-4 bg-gray-50">
+              <div className="flex-1 overflow-y-auto px-6 py-4 bg-gray-50 flex flex-col">
                 {chatHistoryStatus === "pending" ? (
                   <div className="flex items-center justify-center h-full">
                     <Loader text="messages" />
@@ -262,45 +419,50 @@ const Conversation: React.FC = () => {
                     <p>No messages yet. Start the conversation!</p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {conversationMessages.map((msg) => {
-                      const isSentByMe = msg.sender_id === user?.id;
+                  <div className="flex-1 flex flex-col justify-end">
+                    <div className="space-y-4">
+                      {conversationMessages.map((msg) => {
+                        const isSentByMe = msg.sender_id === user?.id;
 
-                      return (
-                        <div
-                          key={msg.id}
-                          className={`flex ${
-                            isSentByMe ? "justify-end" : "justify-start"
-                          }`}
-                        >
+                        return (
                           <div
-                            className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg shadow ${
-                              isSentByMe
-                                ? "bg-black text-white rounded-br-none"
-                                : "bg-white text-gray-800 rounded-bl-none"
+                            key={msg.id}
+                            className={`flex ${
+                              isSentByMe ? "justify-end" : "justify-start"
                             }`}
                           >
-                            <p className="break-words">{msg.content}</p>
-                            <p
-                              className={`text-xs mt-1 ${
-                                isSentByMe ? "text-blue-200" : "text-gray-500"
+                            <div
+                              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg shadow ${
+                                isSentByMe
+                                  ? "bg-black text-white rounded-br-none"
+                                  : "bg-white text-gray-800 rounded-bl-none"
                               }`}
                             >
-                              {new Date(msg.created_at).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                              {isSentByMe && (
-                                <span className="ml-2">
-                                  {msg.is_read ? "✓✓" : "✓"}
-                                </span>
-                              )}
-                            </p>
+                              <p className="break-words">{msg.content}</p>
+                              <p
+                                className={`text-xs mt-1 ${
+                                  isSentByMe ? "text-blue-200" : "text-gray-500"
+                                }`}
+                              >
+                                {new Date(msg.created_at).toLocaleTimeString(
+                                  [],
+                                  {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  }
+                                )}
+                                {isSentByMe && (
+                                  <span className="ml-2">
+                                    {msg.is_read ? "✓✓" : "✓"}
+                                  </span>
+                                )}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                    <div ref={messageEndRef} />
+                        );
+                      })}
+                      <div ref={messageEndRef} />
+                    </div>
                   </div>
                 )}
               </div>
@@ -355,6 +517,102 @@ const Conversation: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* New Chat Modal */}
+      {showNewChatModal && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={() => setShowNewChatModal(false)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[80vh] flex flex-col m-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">New Chat</h2>
+              <button
+                onClick={() => setShowNewChatModal(false)}
+                className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <svg
+                  className="w-6 h-6 text-gray-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Body - Friends List */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {friendsStatus === "pending" ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader text="friends" />
+                </div>
+              ) : friendsStatus === "error" ? (
+                <div className="text-center py-8">
+                  <p className="text-red-500">Error loading friends</p>
+                  <p className="text-sm text-gray-500 mt-2">
+                    {friendsError?.message}
+                  </p>
+                </div>
+              ) : friends && friends.length > 0 ? (
+                <div className="space-y-2">
+                  {friends.map((friend) => (
+                    <div
+                      key={friend.id}
+                      onClick={() => handleStartChatWithFriend(friend)}
+                      className="p-3 cursor-pointer rounded-lg hover:bg-gray-100 transition-colors flex items-center space-x-3"
+                    >
+                      <div className="h-10 w-10 bg-black text-white flex items-center justify-center rounded-full font-semibold">
+                        {friend.username.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {friend.username}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Click to start chatting
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <svg
+                    className="mx-auto h-16 w-16 text-gray-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                    />
+                  </svg>
+                  <p className="mt-4 text-gray-600 font-medium">
+                    No Friends Yet
+                  </p>
+                  <p className="mt-2 text-sm text-gray-500">
+                    Add friends to start chatting!
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
