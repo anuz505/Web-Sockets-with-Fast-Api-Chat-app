@@ -5,9 +5,9 @@ from pydantic import Field
 load_dotenv()
 import os
 
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here-change-in-production")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+# SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here-change-in-production")
+# ALGORITHM = "HS256"
+# ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
 
 class Settings(BaseSettings):
@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
 
+    secret_key: str = Field(description="jwt secret")
+    algorithm: str = Field(default="HS256", description="JWT algo")
+    access_token_expire_minutes: int = Field(default=30, description="jwt token")
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore"
     )
@@ -36,5 +39,14 @@ class Settings(BaseSettings):
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
 
+    # redis
+    redis_host: str = Field(default="redis", description="redis host")
+    redis_port: int = Field(default=6379, description="redis port")
+    redis_db: int = Field(default=1, description="redis db name")
+
 
 settings = Settings()
+
+SECRET_KEY = settings.secret_key
+ALGORITHM = settings.algorithm
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes

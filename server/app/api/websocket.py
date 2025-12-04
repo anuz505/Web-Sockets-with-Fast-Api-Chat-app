@@ -1,11 +1,11 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 from core.websocket_engine import manager
 import jwt
-
 from core.config import SECRET_KEY, ALGORITHM
 from db.database import get_user_by_username, db_connection
 from core.logger import logger
 import asyncio
+from core.redis_service import redis_service
 
 websocket_router = APIRouter()
 
@@ -63,6 +63,11 @@ async def websocket_endpoint(websocket: WebSocket):
                 return
             user_id = user["id"]
             await manager.connect(user_id, websocket)
+            user_channel = redis_service.get_user_channel(user_id)
+            await redis_service.subscribe_to_channel(
+                user_channel, manager.handle_redis_message
+            )
+            logger.info(f"user {user_id} subscribed to Redis channel: {user_channel}")
 
             await websocket.send_json(
                 {
@@ -133,17 +138,29 @@ async def websocket_endpoint(websocket: WebSocket):
                     "is_read": saved_message["is_read"],
                 }
 
-                delivered = await manager.send_private_message(
+                local_delivered = await manager.send_private_message(
                     reciever_id, message_data
                 )
-                if delivered:
-                    logger.info("message delivered")
+                reciever_channel = redis_service.get_user_channel(reciever_id)
+                redis_published = await redis_service.publish_message(
+                    reciever_channel,
+                    {"type": "new_message", "user_id": reciever_id, **message_data},
+                )
+                delivery_status = (
+                    "delivered"
+                    if local_delivered
+                    else ("published" if redis_published else "failed")
+                )
+                if local_delivered:
+                    logger.info("message delivered locally")
+                elif redis_published:
+                    logger.info(f"message published to redis for user {reciever_id}")
                 else:
-                    logger.info("reciver offline but message has been saved")
+                    logger.info("message delivery failed")
                 await websocket.send_json(
                     {
                         "type": "message_sent",
-                        "delivered": delivered,
+                        "delivered": delivery_status,
                         **message_data,
                     }
                 )
@@ -165,6 +182,8 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         logger.error(f"WebSocket error: {e}", exc_info=True)
         if user_id:
+            await manager.disconnect(user_id)
+            await redis_service.get_user_channel(user_id)
             await manager.disconnect(user_id)
         try:
             await websocket.close(code=1011, reason="Internal error")
