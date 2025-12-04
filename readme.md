@@ -339,7 +339,7 @@ This project is open source and available for learning purposes.
 
 ## 👤 Author
 
-**Anuj Bhujel**
+**Anuj Bhandari**
 
 - GitHub: [@anuz505](https://github.com/anuz505)
 
