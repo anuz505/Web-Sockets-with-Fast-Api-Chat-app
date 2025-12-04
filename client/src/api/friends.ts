@@ -8,7 +8,7 @@ export async function sendFriendRequest(friendId: number) {
       throw new Error("Authentication required. Please log in");
     }
     const response = await axios.post(
-      "http://localhost:8000/friends/send_friend_request",
+      "http://localhost:8080/friends/send_friend_request",
       { id: friendId },
       { headers: { Authorization: `Bearer ${token}` } }
     );
@@ -31,7 +31,7 @@ export async function acceptFriendRequest(friendId: number) {
       throw new Error("Authentication required. Please log in");
     }
     await axios.patch(
-      `http://localhost:8000/friends/accept/${friendId}`, // ✅ PATCH with path parameter
+      `http://localhost:8080/friends/accept/${friendId}`, // ✅ PATCH with path parameter
       {}, // Empty body for PATCH
       {
         headers: { Authorization: `Bearer ${token}` },
@@ -56,7 +56,7 @@ export async function rejectFriendRequest(friendId: number) {
       throw new Error("Authentication required. Please log in");
     }
     await axios.patch(
-      `http://localhost:8000/friends/reject/${friendId}`,
+      `http://localhost:8080/friends/reject/${friendId}`,
       {},
       {
         headers: { Authorization: `Bearer ${token}` },

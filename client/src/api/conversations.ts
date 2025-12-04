@@ -11,7 +11,7 @@ export async function getAllConversations() {
       throw new Error("Authentication required. Please log in.");
     }
     const response = await axios.get<Conversations>(
-      "http://localhost:8000/messages/conversations?limit=50&offset=0",
+      "http://localhost:8080/messages/conversations?limit=50&offset=0",
       {
         headers: { Authorization: `Bearer ${token}` },
       }
@@ -35,7 +35,7 @@ export async function retrieverChatHistory(other_user_id: number) {
       throw new Error("Authentication required. Please log in");
     }
     const response = await axios.get<Message[]>(
-      `http://localhost:8000/messages/conversations/${other_user_id}?limit=50&offset=0`,
+      `http://localhost:8080/messages/conversations/${other_user_id}?limit=50&offset=0`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
     return response.data;
