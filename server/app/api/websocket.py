@@ -101,7 +101,7 @@ async def websocket_endpoint(websocket: WebSocket):
             elif data.get("type") == "message":
                 content = data.get("content")
                 reciever_id = data.get("reciever_id")
-                logger.info(f"message from {reciever_id}")
+                logger.info(f"message from user {user_id} to {reciever_id}")
 
                 if not content or not reciever_id:
                     await websocket.send_json(

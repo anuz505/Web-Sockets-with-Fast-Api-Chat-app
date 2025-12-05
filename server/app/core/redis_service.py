@@ -24,7 +24,7 @@ class RedisServer:
                 db=settings.redis_db,
                 # password = REDIS_PASSWORD
                 max_connections=50,
-                socket_timeout=5,
+                socket_timeout=None,  # No timeout for pubsub connections
                 socket_connect_timeout=5,
             )
             self.redis_client = redis.Redis(
@@ -34,6 +34,13 @@ class RedisServer:
                 retry_on_timeout=True,
             )
             await self.redis_client.ping()
+
+            # Initialize pubsub connection immediately
+            self.pubsub = self.redis_client.pubsub()
+
+            # Subscribe to a dummy channel to kickstart the listener
+            await self.pubsub.subscribe("_keepalive")
+
             self.is_connected = True
             self._reconnecting = False
             logger.info("Redis connected successfully")
@@ -84,8 +91,10 @@ class RedisServer:
 
         try:
             message_json = json.dumps(message)
-            await self.redis_client.publish(channel, message_json)
-            logger.debug(f"Published message to channel: {channel}")
+            subscribers_count = await self.redis_client.publish(channel, message_json)
+            logger.info(
+                f"📤 Published to {channel} (reached {subscribers_count} subscribers)"
+            )
             return True
         except json.JSONEncodeError as e:
             logger.error(f"Failed to serialize message for channel '{channel}': {e}")
@@ -102,13 +111,17 @@ class RedisServer:
             logger.error("Redis is not connected")
             return False
 
+        if not self.pubsub:
+            logger.error("Redis pubsub not initialized")
+            return False
+
         try:
-            if not self.pubsub:
-                self.pubsub = self.redis_client.pubsub()
+            if channel in self.subscribers:
+                logger.debug(f"Already subscribed to channel: {channel}")
+                return True
 
             await self.pubsub.subscribe(channel)
             self.subscribers[channel] = handler
-            logger.info(f"Subscribed to channel: {channel}")
             return True
         except RedisError as e:
             logger.error(f"Failed to subscribe to channel due to: {e}")
@@ -127,7 +140,6 @@ class RedisServer:
         try:
             await self.pubsub.unsubscribe(channel)
             self.subscribers.pop(channel, None)
-            logger.info(f"Unsubscribed from channel: {channel}")
             return True
         except RedisError as e:
             logger.error(f"Failed to unsubscribe from channel due to: {e}")
@@ -141,10 +153,13 @@ class RedisServer:
             logger.error("PubSub not initialized")
             return False
         try:
-            logger.info("Starting Redis message listener")
             async for message in self.pubsub.listen():
                 if message["type"] == "message":
                     channel = message["channel"]
+                    # Decode bytes to string if needed
+                    if isinstance(channel, bytes):
+                        channel = channel.decode("utf-8")
+
                     data = message["data"]
                     if channel in self.subscribers:
                         try:
@@ -153,7 +168,11 @@ class RedisServer:
                         except json.JSONDecodeError as e:
                             logger.error(f"Invalid JSON in message: {e}")
                         except Exception as e:
-                            logger.error(f"Error handling message: {e}")
+                            logger.error(f"Error handling message: {e}", exc_info=True)
+                    else:
+                        logger.warning(
+                            f"⚠️ No handler for channel: {channel} (Available: {list(self.subscribers.keys())})"
+                        )
         except RedisError as e:
             logger.error(f"Redis error: {e}")
             # Try to reconnect and restart listener
