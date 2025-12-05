@@ -133,6 +133,23 @@ services:
     networks:
       - chat-network
 
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: frontend-sarcasm-sync
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    depends_on:
+      - nginx
+    networks:
+      - chat-network
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
 volumes:
   postgres_data:
     driver: local
