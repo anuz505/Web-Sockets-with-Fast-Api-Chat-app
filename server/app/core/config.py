@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     secret_key: str = Field(description="jwt secret")
     algorithm: str = Field(default="HS256", description="JWT algo")
     access_token_expire_minutes: int = Field(default=30, description="jwt token")
+    refresh_token_expire_days: int = Field(
+        default=7, description="Refresh token expiry in days"
+    )
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore"
     )
@@ -50,3 +53,4 @@ settings = Settings()
 SECRET_KEY = settings.secret_key
 ALGORITHM = settings.algorithm
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes
+REFRESH_TOKEN_EXPIRE_DAYS = settings.refresh_token_expire_days

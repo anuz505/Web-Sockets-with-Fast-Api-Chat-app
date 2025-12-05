@@ -9,7 +9,7 @@ export const initialState: AuthState = {
   isAuthenticated: false,
   isLoading: true,
   user: null,
-  token: localStorage.getItem("access_token") || null,
+  token: null,
   error: null,
 };
 export interface User {

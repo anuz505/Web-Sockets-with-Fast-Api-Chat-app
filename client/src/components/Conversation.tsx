@@ -42,9 +42,6 @@ const Conversation: React.FC = () => {
   const [showConversation, setShowConversation] = useState(false);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
 
-  // token
-  const token = localStorage.getItem("access_token");
-
   // websocket hook
   const {
     isAuthenticated,
@@ -53,7 +50,7 @@ const Conversation: React.FC = () => {
     sendMessage,
     message: wsMessages,
     connectionStatus,
-  } = useWebSocket(token);
+  } = useWebSocket();
 
   // retrieve chat history
   const {

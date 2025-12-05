@@ -1,14 +1,15 @@
 import axios, { AxiosError } from "axios";
 import type { ApiError } from "./fetchFriends";
+import store from "../store/store";
 
 export async function sendFriendRequest(friendId: number) {
   try {
-    const token: string | null = localStorage.getItem("access_token");
+    const token = store.getState().auth.token;
     if (!token) {
       throw new Error("Authentication required. Please log in");
     }
     const response = await axios.post(
-      "http://localhost:8080/friends/send_friend_request",
+      "/friends/send_friend_request",
       { id: friendId },
       { headers: { Authorization: `Bearer ${token}` } }
     );
@@ -26,13 +27,13 @@ export async function sendFriendRequest(friendId: number) {
 }
 export async function acceptFriendRequest(friendId: number) {
   try {
-    const token = localStorage.getItem("access_token");
+    const token = store.getState().auth.token;
     if (!token) {
       throw new Error("Authentication required. Please log in");
     }
     await axios.patch(
-      `http://localhost:8080/friends/accept/${friendId}`, // ✅ PATCH with path parameter
-      {}, // Empty body for PATCH
+      `/friends/accept/${friendId}`,
+      {},
       {
         headers: { Authorization: `Bearer ${token}` },
       }
@@ -51,12 +52,12 @@ export async function acceptFriendRequest(friendId: number) {
 
 export async function rejectFriendRequest(friendId: number) {
   try {
-    const token = localStorage.getItem("access_token");
+    const token = store.getState().auth.token;
     if (!token) {
       throw new Error("Authentication required. Please log in");
     }
     await axios.patch(
-      `http://localhost:8080/friends/reject/${friendId}`,
+      `/friends/reject/${friendId}`,
       {},
       {
         headers: { Authorization: `Bearer ${token}` },

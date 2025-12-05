@@ -1,5 +1,7 @@
 // custom React Hook that manage the entire lifecycle of the websocket connection.
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useAppSelector, useAppDispatch } from "../store/hooks/hook";
+import { refreshAccessToken } from "../store/auth-slice";
 import type { User } from "../types/auth-types";
 import type {
   UseWebSocketReturn,
@@ -7,7 +9,7 @@ import type {
   WebSocketMessage,
 } from "../types/conversations-types";
 
-export const useWebSocket = (token: string | null): UseWebSocketReturn => {
+export const useWebSocket = (): UseWebSocketReturn => {
   const ws = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -20,27 +22,44 @@ export const useWebSocket = (token: string | null): UseWebSocketReturn => {
   const reconnectTimeoutRef = useRef<number | null>(null);
   const pingIntervalRef = useRef<number | null>(null);
 
-  const connect = useCallback(() => {
+  // Get token from Redux state
+  const { token } = useAppSelector((state) => state.auth);
+  const dispatch = useAppDispatch();
+
+  const connect = useCallback(async () => {
     // two checks
     if (!token) {
-      setError("No token provided");
+      console.log("WebSocket: Waiting for token...");
       return;
     }
     if (
       ws.current?.readyState === WebSocket.OPEN ||
       ws.current?.readyState === WebSocket.CONNECTING
     ) {
+      console.log("WebSocket: Already connecting or connected");
       return;
     }
     // UI updates
     setConnectionStatus("connecting");
     setError(null);
 
-    // ws connection
-    const wsURL = "ws://localhost:8080/ws";
-    ws.current = new WebSocket(wsURL);
+    // ws connection - use same origin as frontend
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsURL = `${protocol}//${window.location.host}/ws`;
+    console.log("WebSocket: Connecting to", wsURL);
+
+    try {
+      ws.current = new WebSocket(wsURL);
+    } catch (error) {
+      console.error("WebSocket: Failed to create connection", error);
+      setError("Failed to create WebSocket connection");
+      setConnectionStatus("disconnected");
+      return;
+    }
+
     //ws connected
     ws.current.onopen = () => {
+      console.log("WebSocket: Connection opened");
       setIsConnected(true);
       setConnectionStatus("connected");
       ws.current?.send(JSON.stringify({ type: "auth", content: token }));
@@ -52,7 +71,7 @@ export const useWebSocket = (token: string | null): UseWebSocketReturn => {
       if (ws.current?.readyState === WebSocket.OPEN) {
         ws.current.send(JSON.stringify({ type: "ping" }));
       }
-    }, 3000);
+    }, 30000);
 
     // switchboard hai
     ws.current.onmessage = (event) => {
@@ -67,8 +86,20 @@ export const useWebSocket = (token: string | null): UseWebSocketReturn => {
             console.log(data.user, "authenticated");
             break;
           case "error":
-            setError(data.content || "Unkown Error");
+            setError(data.content || "Unknown Error");
             console.error("WS error", data.content);
+
+            // If token expired, try to refresh
+            if (
+              data.content?.includes("Token expired") ||
+              data.content?.includes("expired")
+            ) {
+              dispatch(refreshAccessToken()).then(() => {
+                // Reconnect with new token
+                disconnect();
+                setTimeout(connect, 1000);
+              });
+            }
             break;
           case "message_sent":
             const sentMessage: Message = {
@@ -82,7 +113,7 @@ export const useWebSocket = (token: string | null): UseWebSocketReturn => {
             setMessage((prev) => [...prev, sentMessage]);
             break;
           case "pong":
-            console.log("Pong");
+            console.log("Pong received");
             break;
 
           case "new_message":
@@ -98,7 +129,7 @@ export const useWebSocket = (token: string | null): UseWebSocketReturn => {
             setMessage((prev) => [...prev, new_message]);
             break;
           default:
-            console.warn("Unkown message type bruh", data.type);
+            console.warn("Unknown message type", data.type);
         }
       } catch (error) {
         console.error("Failed to parse WebSocket message:", error);
@@ -126,7 +157,7 @@ export const useWebSocket = (token: string | null): UseWebSocketReturn => {
         }, 5000);
       }
     };
-  }, [token]);
+  }, [token, dispatch]);
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
@@ -171,10 +202,19 @@ export const useWebSocket = (token: string | null): UseWebSocketReturn => {
   );
   useEffect(() => {
     if (token) {
-      connect();
+      // Add small delay to ensure backend is ready after login
+      const timeoutId = setTimeout(() => {
+        console.log("WebSocket: Token available, attempting connection");
+        connect();
+      }, 500);
+
+      return () => {
+        clearTimeout(timeoutId);
+        disconnect();
+      };
     }
     return () => {
-      disconnect;
+      disconnect();
     };
   }, [token, connect, disconnect]);
   return {

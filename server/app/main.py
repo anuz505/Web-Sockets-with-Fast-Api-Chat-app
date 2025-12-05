@@ -67,10 +67,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-app.include_router(auth_router)
-app.include_router(websocket_router)
-app.include_router(friends_router)
-app.include_router(message_router)
+
+# CORS must be added before routers
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -78,6 +76,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(auth_router)
+app.include_router(websocket_router)
+app.include_router(friends_router)
+app.include_router(message_router)
 
 if __name__ == "__main__":
     import uvicorn

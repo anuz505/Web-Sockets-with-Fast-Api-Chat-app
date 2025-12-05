@@ -19,13 +19,9 @@ export const RegisterUser = createAsyncThunk<
   { rejectValue: string }
 >("/auth/register", async (formData, thunkAPI) => {
   try {
-    const response = await axios.post(
-      "http://127.0.0.1:8080/auth/register",
-      formData,
-      {
-        withCredentials: true,
-      }
-    );
+    const response = await axios.post("/auth/register", formData, {
+      withCredentials: true,
+    });
     return response.data;
   } catch (error) {
     const axiosError = error as AxiosError<{ detail: string }>;
@@ -45,24 +41,21 @@ export const loginUser = createAsyncThunk<
     params.append("password", formData.password);
 
     const loginResponse = await axios.post<AuthResponse>(
-      "http://127.0.0.1:8080/auth/token",
+      "/auth/token",
       params,
       {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
+        withCredentials: true,
       }
     );
     const token = loginResponse.data?.access_token;
-    const userResponse = await axios.get<User>(
-      "http://127.0.0.1:8080/auth/me",
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-    localStorage.setItem("access_token", token);
+    const userResponse = await axios.get<User>("/auth/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
     return {
       user: userResponse.data,
       token: token,
@@ -75,17 +68,45 @@ export const loginUser = createAsyncThunk<
   }
 });
 
+export const refreshAccessToken = createAsyncThunk<
+  string,
+  void,
+  { rejectValue: string }
+>("auth/refresh", async (_, thunkAPI) => {
+  try {
+    const response = await axios.post<AuthResponse>(
+      "/auth/refresh",
+      {},
+      {
+        withCredentials: true,
+      }
+    );
+    return response.data.access_token;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ detail: string }>;
+    return thunkAPI.rejectWithValue(
+      axiosError.response?.data?.detail || "Token refresh failed"
+    );
+  }
+});
+
 export const checkAuth = createAsyncThunk<User, void, { rejectValue: string }>(
   "auth/checkAuth",
   async (_, thunkAPI) => {
     try {
-      const token = localStorage.getItem("access_token");
+      const state = thunkAPI.getState() as { auth: typeof initialState };
+      let token = state.auth.token;
 
       if (!token) {
-        return thunkAPI.rejectWithValue("No token found");
+        const refreshResult = await thunkAPI.dispatch(refreshAccessToken());
+        if (refreshAccessToken.fulfilled.match(refreshResult)) {
+          token = refreshResult.payload;
+        } else {
+          return thunkAPI.rejectWithValue("No valid token found");
+        }
       }
 
-      const response = await axios.get<User>(`http://127.0.0.1:8080/auth/me`, {
+      const response = await axios.get<User>(`/auth/me`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -94,7 +115,6 @@ export const checkAuth = createAsyncThunk<User, void, { rejectValue: string }>(
       return response.data;
     } catch (error) {
       // Token is invalid or expired
-      localStorage.removeItem("access_token");
       const axiosError = error as AxiosError<ErrorResponse>;
       return thunkAPI.rejectWithValue(
         axiosError.response?.data?.detail || "Authentication failed"
@@ -105,7 +125,13 @@ export const checkAuth = createAsyncThunk<User, void, { rejectValue: string }>(
 
 // Logout user
 export const logoutUser = createAsyncThunk("auth/logout", async () => {
-  localStorage.removeItem("access_token");
+  await axios.post(
+    "/auth/logout",
+    {},
+    {
+      withCredentials: true,
+    }
+  );
 });
 //auth slice hai
 const authSlice = createSlice({
@@ -125,7 +151,6 @@ const authSlice = createSlice({
       state.token = null;
       state.error = null;
       state.isLoading = false;
-      localStorage.removeItem("access_token");
     },
   },
   extraReducers: (builder) => {
@@ -166,6 +191,15 @@ const authSlice = createSlice({
         state.token = null;
       })
 
+      .addCase(refreshAccessToken.fulfilled, (state, action) => {
+        (state.token = action.payload), (state.isAuthenticated = true);
+      })
+      .addCase(refreshAccessToken.rejected, (state) => {
+        state.isAuthenticated = false;
+        state.user = null;
+        state.token = null;
+      })
+
       // Check Auth
       .addCase(checkAuth.pending, (state) => {
         state.isLoading = true;
@@ -174,7 +208,6 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.isAuthenticated = true;
         state.user = action.payload;
-        state.token = localStorage.getItem("access_token");
         state.error = null;
       })
       .addCase(checkAuth.rejected, (state) => {
