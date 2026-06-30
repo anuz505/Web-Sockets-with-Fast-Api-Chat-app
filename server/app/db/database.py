@@ -5,8 +5,7 @@ from typing import Optional
 from core.logger import logger
 import asyncpg
 
-
-db_connection = Database(settings.database_url)
+db_connection = Database(settings.database_url, min_size=5, max_size=20)
 
 
 async def create_database_if_not_exists():
@@ -42,8 +41,7 @@ async def create_database_if_not_exists():
 
 async def init_db():
     try:
-        await db_connection.execute(
-            """
+        await db_connection.execute("""
                 CREATE TABLE IF NOT EXISTS users (
                     id SERIAL PRIMARY KEY,
                     email TEXT UNIQUE NOT NULL,
@@ -51,12 +49,10 @@ async def init_db():
                     hashed_password TEXT NOT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
-            """
-        )
+            """)
         logger.debug("Users table created/verified")
         # message tables
-        await db_connection.execute(
-            """
+        await db_connection.execute("""
             CREATE TABLE IF NOT EXISTS messages (
                 id SERIAL PRIMARY KEY,
                 sender_id INTEGER NOT NULL,
@@ -70,25 +66,19 @@ async def init_db():
                 CONSTRAINT fk_reciever FOREIGN KEY (reciever_id)
                     REFERENCES users(id) ON DELETE CASCADE
             )
-            """
-        )
+            """)
         logger.debug("Messages table created/verified")
         # Create indexes for better query performance
-        await db_connection.execute(
-            """
+        await db_connection.execute("""
             CREATE INDEX IF NOT EXISTS idx_messages_reciever
             ON messages(reciever_id, created_at DESC)
-            """
-        )
-        await db_connection.execute(
-            """
+            """)
+        await db_connection.execute("""
             CREATE INDEX IF NOT EXISTS idx_messages_sender
             ON messages(sender_id, created_at DESC)
-            """
-        )
+            """)
         logger.debug("Database indexes created/verified")
-        await db_connection.execute(
-            """
+        await db_connection.execute("""
                 CREATE TABLE IF NOT EXISTS friendships (
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER REFERENCES users(id),
@@ -97,23 +87,17 @@ async def init_db():
                 created_at TIMESTAMP DEFAULT NOW(),
                 UNIQUE(user_id,friend_id)
                 ); 
-            """
-        )
-        await db_connection.execute(
-            """
+            """)
+        await db_connection.execute("""
                 CREATE INDEX IF NOT EXISTS idx_friendships_user ON friendships(user_id);
-            """
-        )
-        await db_connection.execute(
-            """
+            """)
+        await db_connection.execute("""
                 CREATE INDEX IF NOT EXISTS idx_friendships_friend ON friendships(friend_id);
-            """
-        )
+            """)
 
         logger.debug("Friendships table init")
         # conversations
-        await db_connection.execute(
-            """
+        await db_connection.execute("""
                                     CREATE TABLE IF NOT EXISTS conversations (
                                     id SERIAL PRIMARY KEY,
                                     sender_id INTEGER REFERENCES users(id),
@@ -121,8 +105,7 @@ async def init_db():
                                     content varchar(200),
                                     created_at TIMESTAMP DEFAULT NOW(),
                                     is_read BOOLEAN DEFAULT FALSE)
-                                    """
-        )
+                                    """)
         logger.debug("Conversations table init")
 
         logger.info("✅ Database initialization complete")
