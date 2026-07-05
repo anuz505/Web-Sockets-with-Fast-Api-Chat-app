@@ -24,7 +24,6 @@ export function createUserPair(prefix) {
 // homepage.spec.js's "authenticated user" tests) without going through the
 // login form. login.spec.js uses it directly (not via storageState) because
 // it needs the account to exist, not to already be logged in — it's testing
-// the login form itself.
 export const LOGIN_FIXTURE_USER = {
   username: 'e2e-login-fixture',
   email: 'e2e-login-fixture@example.com',
