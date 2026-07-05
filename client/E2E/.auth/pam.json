@@ -1,0 +1,15 @@
+{
+  "cookies": [
+    {
+      "name": "refresh_token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJwYW0iLCJleHAiOjE3ODM0ODgxNDcsInR5cGUiOiJyZWZyZXNoIn0.i0QZgpHgcZg2PpobEKDtskB6y-fhQUn61pCZIYmyMAM",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1783488147.603803,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": []
+}
