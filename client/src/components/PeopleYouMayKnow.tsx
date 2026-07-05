@@ -93,6 +93,7 @@ const PeopleYouMayKnow: React.FC = () => {
           {peopleyoumayknow.map((person, index) => (
             <div
               key={person.id}
+              data-testid="user-card"
               className="border-2 border-black p-6 space-y-4 hover:bg-gray-50 transition-all duration-300 animate-slide-up"
               style={{ animationDelay: `${index * 100}ms` }}
             >

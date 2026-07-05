@@ -200,6 +200,7 @@ const Conversation: React.FC = () => {
             friends.map((friend) => (
               <div
                 key={friend.id}
+                data-testid="chat-friend-item"
                 onClick={() => handleStartChatWithFriend(friend)}
                 className="p-4 cursor-pointer border-b hover:bg-gray-50 transition-colors"
               >
@@ -295,6 +296,7 @@ const Conversation: React.FC = () => {
               conversations.map((conversation) => (
                 <div
                   key={conversation.other_user_id}
+                  data-testid="chat-conversation-item"
                   onClick={() => handleFriendClick(conversation)}
                   className={`p-4 cursor-pointer transition-colors hover:bg-gray-50 border-b border-gray-100 ${
                     selectedConversation?.other_user_id ===
@@ -330,6 +332,7 @@ const Conversation: React.FC = () => {
               friends.map((friend) => (
                 <div
                   key={friend.id}
+                  data-testid="chat-friend-item"
                   onClick={() => handleStartChatWithFriend(friend)}
                   className={`p-4 cursor-pointer transition-colors hover:bg-gray-50 border-b border-gray-100 ${
                     selectedConversation?.other_user_id === friend.id
@@ -389,7 +392,10 @@ const Conversation: React.FC = () => {
                     {selectedConversation.username.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">
+                    <p
+                      data-testid="chat-partner-name"
+                      className="text-sm font-semibold text-gray-900"
+                    >
                       {selectedConversation.username}
                     </p>
                     <p className="text-xs text-gray-500">
@@ -424,6 +430,7 @@ const Conversation: React.FC = () => {
                         return (
                           <div
                             key={msg.id}
+                            data-testid="chat-message"
                             className={`flex ${
                               isSentByMe ? "justify-end" : "justify-start"
                             }`}
@@ -469,6 +476,7 @@ const Conversation: React.FC = () => {
                 <form onSubmit={handleSendMessage} className="flex gap-3">
                   <input
                     type="text"
+                    data-testid="chat-message-input"
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
                     placeholder={
@@ -479,6 +487,7 @@ const Conversation: React.FC = () => {
                   />
                   <button
                     type="submit"
+                    data-testid="chat-send-button"
                     disabled={!isAuthenticated || !inputMessage.trim()}
                     className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                   >
