@@ -73,6 +73,7 @@ const MyFriends: React.FC = () => {
           {friends.map((friend, index) => (
             <div
               key={friend.id}
+              data-testid="friend-card"
               className="border-2 border-black p-6 hover:bg-gray-50 transition-colors duration-300 animate-slide-up"
               style={{ animationDelay: `${index * 100}ms` }}
             >

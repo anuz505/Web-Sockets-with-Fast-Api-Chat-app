@@ -1,0 +1,12 @@
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+# storageState files written by tests/auth.setup.js — contain live session
+# cookies/tokens, must never be committed.
+/.auth/
