@@ -44,6 +44,7 @@ const Home: React.FC = () => {
         {/* Rotating quotes */}
         <div className="h-16 sm:h-20 md:h-24 flex items-center justify-center px-4">
           <p
+            data-testid="rotating-quote"
             className={`text-lg sm:text-xl md:text-2xl font-light italic transition-all duration-500 max-w-xs sm:max-w-md md:max-w-2xl ${
               isVisible
                 ? "opacity-100 translate-y-0"

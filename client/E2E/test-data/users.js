@@ -1,27 +1,31 @@
-export const users = [
-    {username: 'pam', email: 'pam@gmail.com', password: 'ValidPass12@3#'},
-    {username: 'ross', email: 'ross@gmail.com', password: 'ValidPass34@3#'},
-    {username: 'noah', email: 'noah@gamil.com', password: 'ValidPass56@3#'},
-    {username: 'rachel', email: 'rachel@gmail.com', password: 'ValidPass78@3#'},
-    {username: 'benjamin', email: 'ben@gmail.com', password: 'ValidPass90@3#'},
-    {username: 'phoebe', email: 'phoebe@gmail.com', password: 'ValidPass01@3#'},
-];
+function uniqueSuffix() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
 
-export const testUsers = {
-    discover: {
-        userA: { username: 'ted', email: 'ted@gmail.com', password: 'ValidPass12@3#' },
-        userB: { username: 'marshall', email: 'marshall@gmail.com', password: 'ValidPass12@3#' },
-    },
-    requests: {
-        userA: { username: 'andie', email: 'andie@gmail.com', password: 'ValidPass12@3#' },
-        userB: { username: 'ben', email: 'ben1@gmail.com', password: 'ValidPass12@3#' },
-    },
-    friends: {
-        userA: { username: 'monica', email: 'monica@gmail.com', password: 'ValidPass12@3#' },
-        userB: { username: 'chandler', email: 'chandler@gmail.com', password: '12345678' },
-    },
-    chat: {
-        userA: { username: 'jack', email: 'jack@gmail.com', password: 'ValidPass12@3#' },
-        userB: { username: 'rose', email: 'rose@gmail.com', password: 'ValidPass12@3#' },
-    },
+export function buildUser(prefix) {
+  const username = `${prefix}-${uniqueSuffix()}`;
+  return {
+    username,
+    email: `${username}@example.com`,
+    password: 'ValidPass12@3#',
+  };
+}
+
+export function createUserPair(prefix) {
+  return {
+    userA: buildUser(`${prefix}-a`),
+    userB: buildUser(`${prefix}-b`),
+  };
+}
+
+// Long-lived fixture user. Seeded once by tests/auth.setup.js (the Playwright
+// "setup" project — see playwright.config.js's `dependencies`) and reused via
+// storageState by specs that need an already-authenticated session (e.g.
+// homepage.spec.js's "authenticated user" tests) without going through the
+// login form. login.spec.js uses it directly (not via storageState) because
+// it needs the account to exist, not to already be logged in — it's testing
+export const LOGIN_FIXTURE_USER = {
+  username: 'e2e-login-fixture',
+  email: 'e2e-login-fixture@example.com',
+  password: 'ValidPass12@3#',
 };

@@ -10,6 +10,8 @@ export class ChatPage {
       messageInput: page.getByTestId('chat-message-input'),
       sendButton: page.getByTestId('chat-send-button'),
       messages: page.getByTestId('chat-message'),
+      emptyState: page.getByText('Start a Chat'),
+      conversationsHeading: page.getByRole('heading', { name: 'Messages' }),
     };
   }
 

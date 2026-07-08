@@ -110,6 +110,7 @@ const FriendRequests: React.FC = () => {
           {friendrequests.map((friendrequest, index) => (
             <div
               key={friendrequest.id}
+              data-testid="friend-request-card"
               className="border-2 border-black p-6 hover:bg-gray-50 transition-colors duration-300 animate-slide-up"
               style={{ animationDelay: `${index * 100}ms` }}
             >
