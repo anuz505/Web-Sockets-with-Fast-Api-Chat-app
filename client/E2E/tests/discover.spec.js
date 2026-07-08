@@ -1,31 +1,40 @@
 import { test, expect } from '@playwright/test';
-import { createUserPair } from '../test-data/users.js';
-import { apiRegister, apiRegisterAndLogin, apiRemoveFriend } from './helpers/e2e-flow.js';
 import { DiscoverPage } from '../page-objects/DiscoverPage.js';
+import {
+  createUserPair,
+  registerUser,
+  loginUser,
+  sendRequest,
+  acceptRequest,
+} from './helpers/e2e-flow.js';
 
-test.describe('Discover page', () => {
-  test('sending a friend request removes that user from the discover list', async ({ page, request }) => {
-    const { userA, userB } = createUserPair('discover');
+test.describe('Discover Page', () => {
+  test('user A discovers user B and sends a friend request', async ({ browser }) => {
+    const { userA, userB } = createUserPair();
 
-    // User B just needs to exist to show up in A's suggestions — no browser
-    // session required for that, so a plain API actor is enough.
-    const createdUserB = await apiRegister(request, userB);
-    const { token } = await apiRegisterAndLogin(page.request, userA);
-
-    const discoverPage = new DiscoverPage(page);
+    const contextA = await browser.newContext();
+    const contextB = await browser.newContext();
+    const pageA = await contextA.newPage();
+    const pageB = await contextB.newPage();
 
     try {
-      await test.step('user B is visible on the discover page', async () => {
-        await discoverPage.goTo();
-        await expect(discoverPage.getUserCard(userB.username)).toBeVisible();
-      });
+      await registerUser(pageA, userA);
+      await registerUser(pageB, userB);
 
-      await test.step('sending a request removes user B from the list', async () => {
-        await discoverPage.addFriend(userB.username);
-        await expect(discoverPage.getUserCard(userB.username)).toHaveCount(0);
-      });
+      await loginUser(pageA, userA);
+      await loginUser(pageB, userB);
+
+      await sendRequest(pageA, userB.username);
+
+      const discoverPage = new DiscoverPage(pageA);
+      await discoverPage.goTo();
+      await expect(discoverPage.getUserCard(userB.username)).toHaveCount(0);
+
+      await acceptRequest(pageB, userA.username);
     } finally {
-      await apiRemoveFriend(page.request, token, createdUserB.id);
+      await contextA.close();
+      await contextB.close();
     }
   });
+
 });

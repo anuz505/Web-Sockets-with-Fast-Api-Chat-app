@@ -17,20 +17,23 @@ export class ChatPage {
 
   async goTo() {
     await this.page.goto('/chat');
-    // The chat page shows one of two mutually-exclusive headers depending on
-    // whether the user has any conversations yet. `.or()` waits for whichever
-    // one actually appears instead of waiting out a full timeout on the one
-    // that doesn't apply before falling back to the other.
-    await expect(this.elements.emptyState.or(this.elements.conversationsHeading)).toBeVisible();
+    try {
+      await expect(this.page.getByText('Start a Chat')).toBeVisible({ timeout: 10000 });
+    } catch {
+      await expect(this.page.getByRole('heading', { name: 'Messages' })).toBeVisible({ timeout: 10000 });
+    }
   }
 
   async openConversation(username) {
     const conversationItem = this.elements.conversationItems.filter({ hasText: username }).first();
     const friendItem = this.elements.friendItems.filter({ hasText: username }).first();
-    const target = (await conversationItem.count()) ? conversationItem : friendItem;
 
-    await expect(target).toBeVisible();
-    await target.click();
+    if (await this.elements.conversationItems.filter({ hasText: username }).count()) {
+      await conversationItem.click();
+    } else {
+      await expect(friendItem).toBeVisible();
+      await friendItem.click();
+    }
 
     await expect(this.elements.partnerName).toHaveText(username);
     await expect(this.elements.messageInput).toBeEnabled();

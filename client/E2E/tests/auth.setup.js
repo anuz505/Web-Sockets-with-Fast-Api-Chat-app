@@ -1,29 +1,30 @@
-import { test as setup } from '@playwright/test';
-import { LOGIN_FIXTURE_USER } from '../test-data/users.js';
+import { test as setup, expect } from '@playwright/test';
+import fs from 'node:fs';
+import { LoginPage } from '../page-objects/LoginPage.js';
+import { testUsers, users } from '../test-data/users.js';
 
-setup('seed the shared login fixture user', async ({ page }) => {
-  const registerResponse = await page.request.post('/auth/register', {
-    data: LOGIN_FIXTURE_USER,
-  });
-  if (!registerResponse.ok() && registerResponse.status() !== 400) {
-    throw new Error(
-      `Failed to seed fixture user: ${registerResponse.status()} ${await registerResponse.text()}`
-    );
-  }
+const allUsers = [
+    ...users,
+    ...Object.values(testUsers).flatMap(pair => Object.values(pair)),
+];
 
-  const loginResponse = await page.request.post('/auth/token', {
-    form: {
-      username: LOGIN_FIXTURE_USER.username,
-      password: LOGIN_FIXTURE_USER.password,
-    },
-  });
-  if (!loginResponse.ok()) {
-    throw new Error(
-      `Failed to log in fixture user: ${loginResponse.status()} ${await loginResponse.text()}`
-    );
-  }
+for (const user of allUsers) {
+    setup(`authenticate ${user.username}`, async ({ page }) => {
+        fs.mkdirSync('.auth', { recursive: true });
 
-  // Persists the refresh_token cookie so specs can `test.use({ storageState })`
-  // and skip the login UI entirely for scenarios that don't test login itself.
-  await page.context().storageState({ path: '.auth/login-fixture.json' });
-});
+        const registerResponse = await page.request.post('/auth/register', {
+            data: user,
+        });
+
+        if (!registerResponse.ok() && registerResponse.status() !== 400) {
+            throw new Error(`Failed to prepare user ${user.username}`);
+        }
+
+        const loginPage = new LoginPage(page);
+        await loginPage.goTo();
+        await loginPage.login(user);
+        await expect(page).toHaveURL(/\/chat/);
+
+        await page.context().storageState({ path: `.auth/${user.username}.json` });
+    });
+}

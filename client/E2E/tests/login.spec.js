@@ -1,8 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { LoginPage } from '../page-objects/LoginPage.js';
-import { LOGIN_FIXTURE_USER } from '../test-data/users.js';
 
-test.describe('Login page', () => {
+test.describe('Login Page', () => {
   let loginPage;
 
   test.beforeEach(async ({ page }) => {
@@ -10,36 +9,33 @@ test.describe('Login page', () => {
     await loginPage.goTo();
   });
 
-  test('rejects a username that does not exist', async ({ page }) => {
-    await loginPage.login({ username: 'no-such-user', password: 'whatever-Pass1' });
+    test('invalid user login', async ({page}) => {  
 
-    await expect(page.getByText('user does not exist')).toBeVisible();
-  });
+        await loginPage.login({username: 'invalidUser', password:'invalidPassword'});
 
-  test('rejects the wrong password for an existing user', async ({ page }) => {
-    await loginPage.login({ username: LOGIN_FIXTURE_USER.username, password: 'wrong-password' });
+        await expect(page.getByText('user does not exist')).toBeVisible();
+    });
 
-    await expect(page.getByText('wrong password')).toBeVisible();
-  });
+    test('invalid password login', async ({page}) => {
+        await loginPage.login({username: 'pam', password:'invalidPassword'});
 
-  test('rejects empty fields via native validation', async () => {
-    await loginPage.submit();
-    await expect(loginPage.userNameInput).toHaveJSProperty(
-      'validationMessage',
-      'Please fill out this field.'
-    );
+        await expect(page.getByText('wrong password')).toBeVisible();
+    });
 
-    await loginPage.fillUsername(LOGIN_FIXTURE_USER.username);
-    await loginPage.submit();
-    await expect(loginPage.passwordInput).toHaveJSProperty(
-      'validationMessage',
-      'Please fill out this field.'
-    );
-  });
+    test('empty fields login', async ({}) => {
+        await loginPage.submit();
 
-  test('logs in with valid credentials', async ({ page }) => {
-    await loginPage.login(LOGIN_FIXTURE_USER);
+        await expect(loginPage.userNameInput).toHaveJSProperty('validationMessage','Please fill out this field.');
+        
+        await loginPage.fillUsername('pam');
+        await loginPage.submit();
 
-    await expect(page).toHaveURL(/\/chat/);
-  });
+        await expect(loginPage.passwordInput).toHaveJSProperty('validationMessage','Please fill out this field.');
+    });
+
+    test('valid user login', async ({page}) => {
+        await loginPage.login({username: 'pam', password:'ValidPass12@3#'});
+
+        await expect(page).toHaveURL(/chat/);
+    });
 });

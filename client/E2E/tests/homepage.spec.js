@@ -1,78 +1,111 @@
 import { test, expect } from '@playwright/test';
 import { HomePage } from '../page-objects/HomePage.js';
+import { LoginPage } from '../page-objects/LoginPage.js';
+import { users } from '../test-data/users.js';
 
-test.describe('Home page', () => {
-  let homePage;
+test.describe('Home Page', () => {
 
-  test.beforeEach(async ({ page }) => {
-    homePage = new HomePage(page);
-    await homePage.goTo();
-  });
+    let homePage;
 
-  test('loads successfully', async ({ page }) => {
-    await expect(page).toHaveURL('/');
-    await expect(page).toHaveTitle(/SarcasmSync/);
-  });
-
-  test('login link redirects to the login page', async ({ page }) => {
-    await homePage.clickNavLink('Login');
-    await expect(page).toHaveURL(/\/login/);
-  });
-
-  test('"Start chatting" redirects an unauthenticated user to login', async ({ page }) => {
-    await homePage.clickStartChatting();
-    await expect(page).toHaveURL(/\/login/);
-  });
-
-  test('"Learn more" does not navigate away from the home page', async ({ page }) => {
-    await homePage.clickLearnMore();
-    await expect(page).toHaveURL('/');
-  });
-
-  test('the rotating quote changes over time', async () => {
-    const observedQuotes = new Set([await homePage.getRotatingQuoteText()]);
-
-    await expect(async () => {
-      observedQuotes.add(await homePage.getRotatingQuoteText());
-      expect(observedQuotes.size).toBeGreaterThan(1);
-    }).toPass({ timeout: 20_000, intervals: [1000] });
-  });
-
-  const protectedLinks = ['Chat', 'Friends', 'Requests', 'Discover'];
-
-  for (const link of protectedLinks) {
-    test(`"${link}" redirects an unauthenticated user to login`, async ({ page }) => {
-      await homePage.clickNavLink(link);
-      await expect(page).toHaveURL(/\/login/);
+    test.beforeEach(async ({ page }) => {
+        homePage = new HomePage(page);
+        await homePage.goTo();
     });
-  }
 
-  test.describe('as an authenticated user', () => {
-    // Reuses the session seeded once by tests/auth.setup.js instead of
-    // logging in through the UI — this suite is about nav behavior, not the
-    // login form, and login.spec.js already covers that. Also means these
-    // no longer need `mode: 'serial'`: every worker gets its own context
-    // loaded from the same storageState file, there's no shared runtime
-    // login to race.
-    test.use({ storageState: '.auth/login-fixture.json' });
+    test('page loads successfully', async ({page}) => {
+        await expect(page).toHaveURL('/');
+        await expect(page).toHaveTitle(/SarcasmSync/);
+    });
 
-    const authenticatedLinks = [
-      { name: 'Chat', url: /\/chat/ },
-      { name: 'Friends', url: /\/friends/ },
-      { name: 'Requests', url: /\/friend-requests/ },
-      { name: 'Discover', url: /\/discover/ },
-    ];
+    test('login link redirects to login page', async ({page}) => {
+        await homePage.clickNavLink('Login');
+        await expect(page).toHaveURL(/\/login/);
+    });
 
-    for (const link of authenticatedLinks) {
-      test(`"${link.name}" navigates to ${link.url.source}`, async ({ page }) => {
-        await homePage.clickNavLink(link.name);
-        await expect(page).toHaveURL(link.url);
-      });
+    //unauthenticated
+    const protectedLinks = ['Chat', 'Friends', 'Requests', 'Discover'];
+
+    for (const link of protectedLinks) {
+        test(`${link} redirects unauthenticated users to login page`, async ({page}) => {
+            await homePage.clickNavLink(link);
+            await expect(page).toHaveURL(/\/login/);
+        });     
     }
-
-    test('"Start chatting" takes an authenticated user to chat', async ({ page }) => {
-      await homePage.clickStartChatting();
-      await expect(page).toHaveURL(/\/chat/);
+    
+    test('Start chatting redirects unauthenticated users to login page', async ({page}) => {
+        await homePage.clickStartChatting();
+        await expect(page).toHaveURL(/\/login/);
     });
-  });
+
+    test('Learn more button navigates nowhere', async () => {
+
+        const currentURL = homePage.page.url();
+
+        await homePage.clickLearnMore();  
+        
+        await expect(homePage.page).toHaveURL(currentURL);      
+    });
+
+    test('rotating quote changes automatically', async () => {
+        
+        const quoteElement = homePage.elements.rotatingQuote;
+        const observedQuotes = new Set();
+
+        const duration = 15000; 
+        const startTime = Date.now();
+
+        let currentText = await homePage.getRotatingQuoteText();
+
+        console.log('Quote:', currentText);
+        observedQuotes.add(currentText);
+
+        while (Date.now() - startTime < duration) {
+            await expect(quoteElement).not.toHaveText(currentText, { timeout: 5000 });
+            
+            currentText = await homePage.getRotatingQuoteText();
+
+            console.log('Quote:', currentText);
+            observedQuotes.add(currentText);
+        }
+
+        console.log('Total quotes observed:', observedQuotes.size);
+        expect(observedQuotes.size).toBeGreaterThan(1);
+    });
+
+    //authenticated 
+    test.describe('Authenticated user', () => {
+
+        test.describe.configure({ mode: 'serial' }); 
+ 
+        test.beforeEach(async ({ page }) => {
+            const loginPage = new LoginPage(page);
+            await loginPage.goTo();
+            await loginPage.login(users[0]);
+            await expect(page).toHaveURL(/chat/);
+ 
+            homePage = new HomePage(page);
+            await homePage.goTo();
+        });
+
+        const authenticatedLinks = [
+            { name: 'Chat',     url: /\/chat/ },
+            { name: 'Friends',  url: /\/friends/ },
+            { name: 'Requests', url: /\/friend-requests/ },
+            { name: 'Discover', url: /\/discover/ },
+        ];
+ 
+        for (const link of authenticatedLinks) {
+            test(`${link.name} takes authenticated user to ${link.url}`, async ({ page }) => {
+                await homePage.clickNavLink(link.name);
+                await expect(page).toHaveURL(link.url);
+            });
+        }
+ 
+        test('Start chatting takes authenticated user to chat page', async ({ page }) => {
+            await homePage.clickStartChatting();
+            await expect(page).toHaveURL(/\/chat/);
+        });
+
+    });
+
 });
