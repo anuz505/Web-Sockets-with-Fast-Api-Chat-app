@@ -11,7 +11,6 @@ export class RegisterPage {
         };
     }
 
-    //getter methods for form fields
     get userNameInput() {
         return this.elements.userNameInput;
     }
