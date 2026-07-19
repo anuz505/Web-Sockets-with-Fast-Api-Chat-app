@@ -35,6 +35,27 @@ services:
       timeout: 5s
       retries: 5
 
+  migrate:
+    build:
+      context: .
+      dockerfile: ./server/Dockerfile
+    container_name: chat_migrate
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: chat-app
+      PYTHONUNBUFFERED: 1
+    command: ["python", "migrate.py"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - chat-network
+
   backend1:
     build:
       context: .
@@ -60,6 +81,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     networks:
       - chat-network
     restart: unless-stopped
@@ -88,6 +111,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     networks:
       - chat-network
     restart: unless-stopped
@@ -119,6 +144,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     volumes:
       - ./app:/app/app
     networks:
