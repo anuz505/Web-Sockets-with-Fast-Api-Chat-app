@@ -13,7 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
+      - name: Create .env file
+        run: echo "secret_key=${{ secrets.ENV}}" > .env
       - name: Start the app stack
         run: docker compose up -d --wait
 
