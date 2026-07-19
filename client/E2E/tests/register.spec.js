@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { RegisterPage } from '../page-objects/RegisterPage.js';
-import { users } from '../test-data/users.js';
+import { buildUser } from '../test-data/users.js';
 
 test.describe('Register Page', () => {
   let registerPage;
@@ -36,30 +36,24 @@ test.describe('Register Page', () => {
     await expect(page.getByText('Password must be at least 6 characters')).toBeVisible();
   });
 
-  test.describe.configure({
-    mode: 'serial'
+  test('registering with a new username and email redirects to login', async ({ page }) => {
+    const user = buildUser('register-new');
+
+    await registerPage.register(user);
+
+    await expect(page).toHaveURL(/\/login/);
   });
 
-   users.forEach(user => {
+  test('registering with an already-used username is rejected', async ({ page }) => {
+    const user = buildUser('register-dup');
 
-    test(`register ${user.username}`, async ({ page }) => {
+    await registerPage.register(user);
+    await expect(page).toHaveURL(/\/login/);
 
-        const registerPage = new RegisterPage(page);
+    await registerPage.goTo();
+    await registerPage.register(user);
 
-        await registerPage.goTo();
-        await registerPage.register(user);
-
-        const loginURL = page.url().includes('/login');
-
-        if (loginURL) {
-            console.log(`${user.username} registered successfully`);
-        } else {
-            console.log(`${user.username} registration failed`);
-            console.log(await page.content());
-        }
-    });
-
-    //duplicate test for the same user to check for duplicate registration
-});
-
+    await expect(page.getByText(/already exists/i)).toBeVisible();
+    await expect(page).toHaveURL(/\/register/);
+  });
 });
