@@ -20,8 +20,14 @@ jobs:
 
       - name: Wait for the app to be reachable
         run: |
-          timeout 90 bash -c 'until curl -sf http://localhost:5173 > /dev/null; do sleep 2; done'
-          timeout 90 bash -c 'until curl -sf http://localhost:8080 > /dev/null; do sleep 2; done'
+          timeout 180 bash -c 'until curl -sf http://localhost:5173 > /dev/null; do sleep 2; done'
+          timeout 180 bash -c 'until curl -sf http://localhost:8080/docs > /dev/null; do sleep 2; done'
+
+      - name: Debug containers on failure
+        if: failure()
+        run: |
+          docker compose ps
+          docker compose logs --no-color --tail=200
 
       - uses: actions/setup-node@v4
         with:

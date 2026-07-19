@@ -126,7 +126,7 @@ services:
     restart: unless-stopped
 
   nginx:
-    image: nginx:latest
+    image: nginx:alpine
     container_name: nginx-sarcasm-sync
     ports:
       - "8080:8080"
@@ -138,6 +138,12 @@ services:
       - backend3
     networks:
       - chat-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/docs || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
   frontend:
     build:
@@ -158,6 +164,12 @@ services:
     restart: unless-stopped
     environment:
       - NODE_ENV=development
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:5173 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
 volumes:
   postgres_data:
     driver: local
